@@ -1180,15 +1180,10 @@ function renderSidebar(){
     const bal=accBalance(a.id);
     const cur=accCurrency(a.id);
     const active=currentView===a.id?'active':'';
-    const goldGrams=cur==='XAU'?accGoldGrams(a.id):null;
-    // For TRY accounts, show accBalanceTRY (includes foreign/gold sub-accounts converted)
-    // For foreign accounts, show native balance
     const tryTotal=accBalanceTRY(a.id);
-    const hasForeignSubs=getSubsOfAcc(a.id).some(s=>(s.currency||cur)!=='TRY');
     let balDisplay;
-    if(cur==='XAU') balDisplay=(goldGrams.toLocaleString('tr-TR',{maximumFractionDigits:2})+'g');
+    if(cur==='TRY') balDisplay=fmt(tryTotal);
     else if(cur!=='TRY') balDisplay=fmtCur(bal,cur);
-    else balDisplay=fmt(tryTotal); // always show TRY total including subs
     html+=`<div class="nav-account ${active}" id="nav-${a.id}" onclick="switchView('${a.id}')">
       <div class="acc-dot" style="background:${a.color}"></div>
       <span style="font-size:15px">${a.emoji}</span>
@@ -1207,10 +1202,14 @@ function renderSidebar(){
       const sa=currentView===s.id?'active':'';
       const sbTRY=toTRY(sb,scur); // null if rate unknown
       let sbDisplay;
-      if(scur==='XAU'){ const g=subGoldGrams(s.id); sbDisplay=g.toLocaleString('tr-TR',{maximumFractionDigits:2})+'g'; }
+      if(scur==='XAU'){
+        const g=subGoldGrams(s.id);
+        const gStr=g.toLocaleString('tr-TR',{maximumFractionDigits:2})+'g';
+        sbDisplay=sb!==0?`${gStr} · ${fmt(sb)}`:gStr;
+      }
       else if(scur==='TRY') sbDisplay=fmt(sb);
       else if(sbTRY!==null) sbDisplay=fmtCur(sb,scur);
-      else sbDisplay=fmtCur(sb,scur); // show native even if no rate yet
+      else sbDisplay=fmtCur(sb,scur);
       html+=`<div class="nav-sub ${sa}" id="nav-${s.id}" onclick="switchView('${s.id}')">
         <span class="sub-cat-badge ${ci.cls}">${ci.label}</span>
         <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.name}</span>
@@ -1298,19 +1297,47 @@ function renderMainContent(){
 function renderSubAccountsSection(accId){
   const subs=getSubsOfAcc(accId);
   if(!subs.length)return`<div style="background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;color:var(--muted)">Henüz alt hesap yok</span><button class="btn btn-blue btn-sm" onclick="openSubModal('${accId}')">＋ Alt Hesap Ekle</button></div>`;
-  return`<div class="sub-accounts-section"><div class="sub-accounts-header"><div class="sub-accounts-title">Alt Hesaplar</div><button class="btn btn-blue btn-sm" onclick="openSubModal('${accId}')">＋ Yeni Alt Hesap</button></div><div class="sub-acc-grid">${subs.map(s=>{const ci=CAT_MAP[s.catalog]||CAT_MAP['Diğer'],bal=subBalance(s.id);return`<div class="sub-acc-card${currentView===s.id?' active-sub':''}" onclick="switchView('${s.id}')"><div class="sac-acts"><button onclick="event.stopPropagation();openSubModal('${accId}','${s.id}')">✏️</button><button onclick="event.stopPropagation();deleteSubAccount('${s.id}')">🗑</button></div><div class="sac-top"><span class="sac-catalog ${ci.cls}">${ci.label}</span></div><div class="sac-name">${s.name}</div>${s.note?`<div style="font-size:10px;color:var(--muted);margin-bottom:4px;font-family:'DM Mono',monospace">${s.note}</div>`:''}<div class="sac-balance" style="color:${bal>=0?'var(--g)':'var(--r)'}">
-  ${(()=>{
+  return`<div class="sub-accounts-section"><div class="sub-accounts-header"><div class="sub-accounts-title">Alt Hesaplar</div><button class="btn btn-blue btn-sm" onclick="openSubModal('${accId}')">＋ Yeni Alt Hesap</button></div><div class="sub-acc-grid">${subs.map(s=>{
+  const ci=CAT_MAP[s.catalog]||CAT_MAP['Diğer'];
   const sc=subCurrency(s.id);
-  if(sc==='XAU'){const g=subGoldGrams(s.id);return g.toLocaleString('tr-TR',{maximumFractionDigits:4})+'g';}
-  return sc!=='TRY'?fmtCur(bal,sc):fmt(bal);
-})()}
-</div>
-${(()=>{
-  const sc=subCurrency(s.id);
-  if(sc==='XAU'){return bal!==0?`<div style="font-size:9.5px;color:var(--muted);font-family:'DM Mono',monospace">≈${fmt(bal)} TL</div>`:'';}
-  if(sc==='TRY')return'';
-  const tv=toTRY(bal,sc);return tv!==null?`<div style="font-size:9.5px;color:var(--muted);font-family:'DM Mono',monospace">≈${fmt(tv)}</div>`:curBadge(sc);
-})()}<div style="font-size:9.5px;color:var(--muted);margin-top:3px;font-family:'DM Mono',monospace">${transactions().filter(t=>t.subAccountId===s.id||t.fromSubId===s.id||t.toSubId===s.id).length} işlem</div></div>`;}).join('')}</div></div>`;
+  const bal=subBalance(s.id); // TRY value (for XAU: sum of goldGram×goldPrice)
+  const txCount=transactions().filter(t=>t.subAccountId===s.id||t.fromSubId===s.id||t.toSubId===s.id).length;
+  const isGold=sc==='XAU';
+  const grams=isGold?subGoldGrams(s.id):null;
+  const tryVal=isGold?bal:toTRY(bal,sc); // bal IS already TRY for XAU
+  const posColor=bal>=0?'var(--g)':'var(--r)';
+
+  // Primary balance display
+  let primaryHtml, secondaryHtml;
+  if(isGold){
+    primaryHtml=`<div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
+      <span class="sac-balance" style="color:var(--gold)">${(grams||0).toLocaleString('tr-TR',{maximumFractionDigits:4})} g</span>
+    </div>
+    <div style="font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:${posColor};margin-top:2px">
+      ${bal!==0?fmt(bal):'₺0,00'}
+    </div>`;
+    secondaryHtml='';
+  } else if(sc!=='TRY'){
+    primaryHtml=`<div class="sac-balance" style="color:${posColor}">${fmtCur(bal,sc)}</div>`;
+    secondaryHtml=tryVal!==null?`<div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px">≈${fmt(tryVal)}</div>`:'';
+  } else {
+    primaryHtml=`<div class="sac-balance" style="color:${posColor}">${fmt(bal)}</div>`;
+    secondaryHtml='';
+  }
+
+  return`<div class="sub-acc-card${currentView===s.id?' active-sub':''}" onclick="switchView('${s.id}')">
+    <div class="sac-acts">
+      <button onclick="event.stopPropagation();openSubModal('${accId}','${s.id}')">✏️</button>
+      <button onclick="event.stopPropagation();deleteSubAccount('${s.id}')">🗑</button>
+    </div>
+    <div class="sac-top"><span class="sac-catalog ${ci.cls}">${ci.label}</span></div>
+    <div class="sac-name">${s.name}</div>
+    ${s.note?`<div style="font-size:10px;color:var(--muted);margin-bottom:4px;font-family:'DM Mono',monospace">${s.note}</div>`:''}
+    ${primaryHtml}
+    ${secondaryHtml}
+    <div style="font-size:9.5px;color:var(--muted);margin-top:4px;font-family:'DM Mono',monospace">${txCount} işlem</div>
+  </div>`;
+}).join('')}</div></div>`;
 }
 
 function renderOverview(){
