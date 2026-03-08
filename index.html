@@ -384,6 +384,76 @@ body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-he
 .toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 16px;font-size:12.5px;font-weight:600;z-index:500;display:none;align-items:center;gap:9px;box-shadow:0 8px 32px rgba(0,0,0,.55);animation:slideUp .3s ease;}
 .toast.show{display:flex;}
 
+/* ── YATIRIM TAKİP ── */
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:20px;}
+.inv-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:18px;
+  position:relative;overflow:hidden;transition:all .25s;
+}
+.inv-card:hover{transform:translateY(-2px);}
+.inv-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.inv-card.profit::before{background:var(--g);}
+.inv-card.loss::before{background:var(--r);}
+.inv-card.open::before{background:var(--gold);}
+.inv-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+.inv-type-badge{
+  font-size:9px;padding:3px 8px;border-radius:4px;
+  font-family:'DM Mono',monospace;font-weight:700;
+  letter-spacing:.5px;text-transform:uppercase;
+}
+.inv-badge-altin{background:rgba(212,168,67,.15);color:var(--gold);}
+.inv-badge-doviz{background:rgba(91,138,245,.15);color:var(--b);}
+.inv-badge-kripto{background:rgba(178,75,255,.15);color:var(--p);}
+.inv-badge-diger{background:rgba(107,107,144,.15);color:var(--muted);}
+.inv-status{font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;}
+.inv-status.open{background:rgba(212,168,67,.1);color:var(--gold);}
+.inv-status.closed-profit{background:rgba(0,229,160,.1);color:var(--g);}
+.inv-status.closed-loss{background:rgba(255,77,109,.1);color:var(--r);}
+.inv-name{font-size:14px;font-weight:700;margin-bottom:4px;}
+.inv-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:12px;}
+.inv-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.inv-row-lbl{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.5px;}
+.inv-row-val{font-family:'DM Mono',monospace;font-size:12px;font-weight:600;}
+.inv-pnl{
+  margin-top:12px;padding:10px 12px;border-radius:var(--radius-sm);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.inv-pnl.profit{background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.15);}
+.inv-pnl.loss{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.15);}
+.inv-pnl.open{background:var(--gold-bg);border:1px solid rgba(212,168,67,.15);}
+.inv-pnl-lbl{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.inv-pnl-val{font-family:'DM Mono',monospace;font-size:15px;font-weight:800;}
+.inv-acts{display:none;gap:4px;position:absolute;top:12px;right:12px;}
+.inv-card:hover .inv-acts{display:flex;}
+.inv-acts button{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:3px 7px;cursor:pointer;font-size:11px;color:var(--muted);transition:all .2s;}
+.inv-acts button:hover{color:var(--text);}
+.inv-progress{margin-top:10px;}
+.inv-progress-track{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.inv-progress-fill{height:100%;border-radius:3px;transition:width .6s ease;}
+.inv-progress-lbl{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:3px;font-family:'DM Mono',monospace;}
+.inv-summary-bar{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px 22px;
+  display:flex;gap:26px;flex-wrap:wrap;margin-bottom:20px;
+}
+.inv-live-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:10px;padding:2px 8px;border-radius:10px;
+  background:rgba(0,229,160,.1);color:var(--g);
+  border:1px solid rgba(0,229,160,.2);font-family:'DM Mono',monospace;
+}
+.inv-live-dot{width:5px;height:5px;border-radius:50%;background:var(--g);animation:pulse 1.5s ease-in-out infinite;}
+.inv-rate-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;border-radius:var(--radius-sm);
+  background:var(--surface2);margin-bottom:6px;
+  font-size:12px;
+}
+.inv-rate-name{font-weight:600;}
+.inv-rate-val{font-family:'DM Mono',monospace;font-weight:700;}
+.inv-rate-chg{font-size:10px;font-family:'DM Mono',monospace;}
+
 @media(max-width:980px){
   .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);}
   .sidebar.open{transform:translateX(0);box-shadow:8px 0 40px rgba(0,0,0,.6);}
@@ -477,6 +547,11 @@ body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-he
       <div class="nav-item-plain" id="nav-cashflow" onclick="switchView('cashflow')">
         <span style="font-size:15px;width:18px;text-align:center">📊</span>
         <span style="flex:1">Nakit Akışı Raporu</span>
+      </div>
+      <div class="nav-item-plain" id="nav-investments" onclick="switchView('investments')">
+        <span style="font-size:15px;width:18px;text-align:center">📈</span>
+        <span style="flex:1">Yatırım Takibi</span>
+        <span id="inv-nav-badge" style="font-size:9.5px;font-family:'DM Mono',monospace;color:var(--muted)"></span>
       </div>
 
       <span class="nav-section-label">
@@ -634,6 +709,61 @@ body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-he
 
 <div class="toast" id="toast"><span id="toastIcon">✅</span><span id="toastMsg"></span></div>
 
+<!-- INVESTMENT MODAL -->
+<div class="modal-overlay" id="invModalOverlay" onclick="closeInvModal(event)">
+  <div class="modal">
+    <div class="modal-title" id="invModalTitle">Yeni Yatırım Ekle</div>
+    <div class="form-group">
+      <label class="form-label">Varlık Türü</label>
+      <select class="form-input" id="invType">
+        <option value="Altın">🥇 Altın (Gram, Cumhuriyet, Ata…)</option>
+        <option value="Döviz">💵 Döviz (USD, EUR, GBP…)</option>
+        <option value="Kripto">₿ Kripto (BTC, ETH, USDT…)</option>
+        <option value="Diğer">📦 Diğer</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Yatırım Adı / Notu</label>
+      <input class="form-input" id="invName" placeholder="Örn: Gram Altın, USD, BTC, Cumhuriyet…">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Miktar (adet, gram, lot…)</label>
+      <input class="form-input" id="invQty" type="number" min="0" step="any" placeholder="Örn: 10 (gram), 500 (dolar), 0.05 (BTC)">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Alış Birim Fiyatı (₺)</label>
+      <input class="form-input" id="invBuyPrice" type="number" min="0" step="any" placeholder="Birimi kaça aldınız?">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Alış Tarihi</label>
+      <input class="form-input" id="invBuyDate" type="date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Komisyon / Masraf (₺, opsiyonel)</label>
+      <input class="form-input" id="invFee" type="number" min="0" step="any" placeholder="0,00">
+    </div>
+    <div id="invSellSection">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-top:4px;">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1px">SATILDIYSA</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Satış Birim Fiyatı (₺, opsiyonel)</label>
+        <input class="form-input" id="invSellPrice" type="number" min="0" step="any" placeholder="Boş bırakın = açık pozisyon">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Satış Tarihi</label>
+        <input class="form-input" id="invSellDate" type="date">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeInvModal()">İptal</button>
+      <button class="btn btn-gold" style="flex:2" onclick="saveInvestment()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ FIREBASE ═══ -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -727,8 +857,8 @@ const path = uid => ({
 // ── REALTIME SUBSCRIPTIONS ────────────────────────────────────
 function subscribeToData(uid) {
   showAuthLoading('Verileriniz yükleniyor…');
-  let loaded = {a:false, s:false, t:false};
-  const check = () => { if(loaded.a && loaded.s && loaded.t){ hideAuthLoading(); updateAll(); } };
+  let loaded = {a:false, s:false, t:false, i:false};
+  const check = () => { if(loaded.a && loaded.s && loaded.t && loaded.i){ hideAuthLoading(); updateAll(); } };
   const p = path(uid);
 
   unsubFns.push(onSnapshot(p.accounts(), snap => {
@@ -742,6 +872,12 @@ function subscribeToData(uid) {
   unsubFns.push(onSnapshot(p.txs(), snap => {
     window._transactions = snap.docs.map(d => ({id:d.id, ...d.data()}));
     loaded.t = true; check();
+  }));
+  unsubFns.push(onSnapshot(collection(db, 'users', uid, 'investments'), snap => {
+    window._investments = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    loaded.i = true; check();
+    const badge = document.getElementById('inv-nav-badge');
+    if(badge) badge.textContent = window._investments.filter(i=>!i.sellPrice).length > 0 ? window._investments.filter(i=>!i.sellPrice).length+' açık' : '';
   }));
 }
 
@@ -790,6 +926,15 @@ window._saveTx = async (obj) => {
   showSync();
   await setDoc(path(currentUser.uid).tx(obj.id), obj);
 };
+window._saveInvestment = async (obj) => {
+  showSync();
+  await setDoc(doc(db, 'users', currentUser.uid, 'investments', obj.id), obj);
+};
+window._deleteInvestment = async (id) => {
+  showSync();
+  await deleteDoc(doc(db, 'users', currentUser.uid, 'investments', id));
+};
+
 window._deleteTx = async (id) => {
   showSync();
   await deleteDoc(path(currentUser.uid).tx(id));
@@ -815,9 +960,11 @@ function showAuthError(msg) {
 window._accounts     = [];
 window._subAccounts  = [];
 window._transactions = [];
+window._investments  = [];
 
 function accounts()     { return window._accounts     || []; }
 function subAccounts()  { return window._subAccounts  || []; }
+function investments()   { return window._investments  || []; }
 function transactions() { return window._transactions || []; }
 
 let currentView   = 'all';
@@ -939,6 +1086,7 @@ function switchView(id){
   const isSub=id!=='all'&&id!=='cashflow'&&subAccounts().some(s=>s.id===id);
   if(id==='all'){document.getElementById('page-title').textContent='Tüm İşlemler';document.getElementById('page-subtitle').textContent='Tüm hesapların özeti';}
   else if(id==='cashflow'){document.getElementById('page-title').textContent='Nakit Akışı Raporu';document.getElementById('page-subtitle').textContent='Aylık & Haftalık detaylı analiz';}
+  else if(id==='investments'){document.getElementById('page-title').textContent='Yatırım Takibi';document.getElementById('page-subtitle').textContent='Altın · Döviz · Kripto kar/zarar analizi';}
   else if(isSub){const s=getSub(id),p=getAcc(s?.parentId);document.getElementById('page-title').textContent=s?`${p?.emoji||''} ${p?.name||''} › ${s.name}`:'';document.getElementById('page-subtitle').textContent=s?`Alt Hesap — ${s.catalog}${s.note?' · '+s.note:''}`:''}
   else{const a=getAcc(id);document.getElementById('page-title').textContent=a?`${a.emoji} ${a.name}`:'';document.getElementById('page-subtitle').textContent=a?a.type:'';}
   if(window.innerWidth<=980)document.getElementById('sidebar').classList.remove('open');
@@ -948,6 +1096,7 @@ function switchView(id){
 // ── MAIN CONTENT ─────────────────────────────────────────────
 function renderMainContent(){
   if(currentView==='cashflow'){document.getElementById('mainContent').innerHTML=`<div class="content" id="cfContent"></div>`;renderCashflow();return;}
+  if(currentView==='investments'){document.getElementById('mainContent').innerHTML=`<div class="content" id="invContent"></div>`;renderInvestments();return;}
   const isSub=currentView!=='all'&&currentView!=='cashflow'&&subAccounts().some(s=>s.id===currentView);
   document.getElementById('mainContent').innerHTML=`
     <div class="content">
@@ -1169,10 +1318,275 @@ function renderCfWeekly(container){
     <div class="card" style="margin-top:16px"><div class="card-header"><div class="card-title">Haftalık Detay Tablosu</div></div><div style="overflow-x:auto"><table class="cf-table"><thead><tr><th>Hafta</th><th>Gelir</th><th>Gider</th><th>Net</th><th>İşlem</th></tr></thead><tbody>${weeks.slice().reverse().map(d=>`<tr><td style="color:var(--text);font-family:'Syne',sans-serif;font-size:11px">${d.label}</td><td style="color:var(--g)">${d.inc>0?fmt(d.inc):'—'}</td><td style="color:var(--r)">${d.exp>0?fmt(d.exp):'—'}</td><td style="color:${d.net>=0?'var(--b)':'var(--r)'};font-weight:700">${d.net!==0?(d.net>0?'+':'')+fmt(d.net):'—'}</td><td style="color:var(--muted)">${d.count}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
+// ══════════════════════════════════════════════════════════════
+//  INVESTMENT TRACKER
+// ══════════════════════════════════════════════════════════════
+
+// Live rates cache
+let liveRates = {};
+let ratesLastFetch = 0;
+
+async function fetchLiveRates() {
+  // Only refetch every 5 minutes
+  if(Date.now() - ratesLastFetch < 300000 && Object.keys(liveRates).length > 0) return liveRates;
+  try {
+    // Free open exchange rate API (no key needed for basic rates)
+    const r = await fetch('https://open.er-api.com/v6/latest/TRY');
+    const d = await r.json();
+    if(d && d.rates) {
+      // d.rates are X per 1 TRY, invert for TRY per X
+      liveRates.USD = 1 / d.rates.USD;
+      liveRates.EUR = 1 / d.rates.EUR;
+      liveRates.GBP = 1 / d.rates.GBP;
+      liveRates.CHF = 1 / d.rates.CHF;
+      liveRates.JPY = 1 / d.rates.JPY;
+      liveRates.fetchTime = new Date().toLocaleTimeString('tr-TR');
+      ratesLastFetch = Date.now();
+    }
+  } catch(e) { console.warn('Rate fetch failed', e); }
+  return liveRates;
+}
+
+function invTypeBadge(type) {
+  const map = {
+    'Altın':'inv-badge-altin','Döviz':'inv-badge-doviz',
+    'Kripto':'inv-badge-kripto','Diğer':'inv-badge-diger'
+  };
+  return map[type] || 'inv-badge-diger';
+}
+
+function calcInvPnL(inv) {
+  const cost = (inv.qty * inv.buyPrice) + (inv.fee || 0);
+  if(inv.sellPrice) {
+    const revenue = inv.qty * inv.sellPrice;
+    const pnl = revenue - cost;
+    const pct = (pnl / cost) * 100;
+    return { closed: true, pnl, pct, cost, revenue };
+  }
+  // Check if we have a live rate for this
+  let currentPrice = null;
+  const name = (inv.name || '').toUpperCase();
+  if(inv.type === 'Döviz') {
+    ['USD','EUR','GBP','CHF','JPY'].forEach(cur => {
+      if(name.includes(cur) && liveRates[cur]) currentPrice = liveRates[cur];
+    });
+  }
+  if(currentPrice) {
+    const currentValue = inv.qty * currentPrice;
+    const pnl = currentValue - cost;
+    const pct = (pnl / cost) * 100;
+    return { closed: false, live: true, pnl, pct, cost, currentValue, currentPrice };
+  }
+  return { closed: false, live: false, cost };
+}
+
+async function renderInvestments() {
+  const c = document.getElementById('invContent'); if(!c) return;
+  // Fetch live rates quietly
+  await fetchLiveRates();
+
+  const invs = investments();
+  const open = invs.filter(i => !i.sellPrice);
+  const closed = invs.filter(i => i.sellPrice);
+
+  // Summary stats
+  const closedPnL = closed.reduce((s,i) => { const r=calcInvPnL(i); return s+(r.pnl||0); }, 0);
+  const openCost  = open.reduce((s,i) => { const r=calcInvPnL(i); return s+(r.cost||0); }, 0);
+  const livePnL   = open.reduce((s,i) => { const r=calcInvPnL(i); return s+(r.live?r.pnl:0); }, 0);
+
+  const rateRows = Object.entries(liveRates)
+    .filter(([k]) => k !== 'fetchTime')
+    .map(([cur,val]) => `<div class="inv-rate-row">
+      <span class="inv-rate-name">💵 ${cur} / TRY</span>
+      <span class="inv-rate-val" style="color:var(--b)">₺${val.toFixed(2)}</span>
+    </div>`).join('');
+
+  c.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+      <div class="cf-title" style="margin-bottom:0">📈 Yatırım Takibi</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        ${Object.keys(liveRates).length>1?`<span class="inv-live-badge"><span class="inv-live-dot"></span>Canlı Kur · ${liveRates.fetchTime||''}</span>`:''}
+        <button class="btn btn-gold btn-sm" onclick="openInvModal()">＋ Yeni Yatırım</button>
+        <button class="btn btn-ghost btn-sm" onclick="refreshRates()">🔄 Kur Güncelle</button>
+      </div>
+    </div>
+
+    <!-- Summary Bar -->
+    <div class="inv-summary-bar">
+      <div><div class="ts-label">Açık Pozisyon</div><div class="ts-val" style="color:var(--gold)">${open.length} adet</div></div>
+      <div><div class="ts-label">Toplam Maliyet</div><div class="ts-val" style="color:var(--text)">${fmt(openCost)}</div></div>
+      ${Object.keys(liveRates).length>1?`<div><div class="ts-label">Anlık K/Z (Döviz)</div><div class="ts-val" style="color:${livePnL>=0?'var(--g)':'var(--r)'}">${livePnL>=0?'+':''}${fmt(livePnL)}</div></div>`:''}
+      <div><div class="ts-label">Gerçekleşen K/Z</div><div class="ts-val" style="color:${closedPnL>=0?'var(--g)':'var(--r)'}">${closedPnL>=0?'+':''}${fmt(closedPnL)}</div></div>
+      <div><div class="ts-label">Toplam Yatırım</div><div class="ts-val" style="color:var(--text)">${invs.length} kayıt</div></div>
+    </div>
+
+    <!-- Live Rates -->
+    ${rateRows ? `<div class="card" style="margin-bottom:16px">
+      <div class="card-header"><div class="card-title">💵 Anlık Döviz Kurları (TRY)</div></div>
+      <div style="padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px">${rateRows}</div>
+    </div>` : ''}
+
+    <!-- Open Positions -->
+    ${open.length ? `
+    <div style="font-size:12px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">⏳ Açık Pozisyonlar (${open.length})</div>
+    <div class="inv-grid" id="openInvGrid">
+      ${open.map(i => renderInvCard(i)).join('')}
+    </div>` : `<div style="background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius);padding:24px;text-align:center;color:var(--muted);margin-bottom:16px">
+      <div style="font-size:24px;margin-bottom:8px">📭</div>
+      <div style="font-size:13px">Henüz açık yatırım pozisyonu yok</div>
+      <button class="btn btn-gold btn-sm" style="margin-top:12px" onclick="openInvModal()">＋ İlk Yatırımı Ekle</button>
+    </div>`}
+
+    <!-- Closed Positions -->
+    ${closed.length ? `
+    <div style="font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;margin-top:8px">✅ Kapatılmış Pozisyonlar (${closed.length})</div>
+    <div class="inv-grid">${closed.map(i => renderInvCard(i)).join('')}</div>` : ''}
+  `;
+}
+
+function renderInvCard(inv) {
+  const r = calcInvPnL(inv);
+  const badge = invTypeBadge(inv.type);
+  const typeEmoji = {Altın:'🥇',Döviz:'💵',Kripto:'₿',Diğer:'📦'}[inv.type]||'📦';
+  const days = inv.buyDate ? Math.floor((new Date()-(new Date(inv.buyDate)))/(1000*60*60*24)) : 0;
+
+  let statusHtml, pnlHtml, cardCls;
+
+  if(r.closed) {
+    const profit = r.pnl >= 0;
+    cardCls = profit ? 'profit' : 'loss';
+    statusHtml = `<span class="inv-status ${profit?'closed-profit':'closed-loss'}">${profit?'✅ Kârlı':'❌ Zararlı'}</span>`;
+    const pct = r.pct.toFixed(1);
+    pnlHtml = `<div class="inv-pnl ${profit?'profit':'loss'}">
+      <span class="inv-pnl-lbl">Gerçekleşen K/Z</span>
+      <span class="inv-pnl-val" style="color:${profit?'var(--g)':'var(--r)'}">${r.pnl>=0?'+':''}${fmt(r.pnl)} <span style="font-size:11px">(${pct}%)</span></span>
+    </div>`;
+  } else if(r.live) {
+    const profit = r.pnl >= 0;
+    cardCls = 'open';
+    statusHtml = `<span class="inv-status open">📡 Anlık</span>`;
+    const pct = r.pct.toFixed(1);
+    pnlHtml = `<div class="inv-pnl open">
+      <span class="inv-pnl-lbl">Anlık K/Z</span>
+      <span class="inv-pnl-val" style="color:${profit?'var(--g)':'var(--r)'}">${r.pnl>=0?'+':''}${fmt(r.pnl)} <span style="font-size:11px">(${pct}%)</span></span>
+    </div>`;
+  } else {
+    cardCls = 'open';
+    statusHtml = `<span class="inv-status open">⏳ Açık</span>`;
+    pnlHtml = `<div class="inv-pnl open">
+      <span class="inv-pnl-lbl">Satış fiyatı girilince K/Z hesaplanır</span>
+      <button class="btn btn-ghost btn-sm" onclick="openInvModal('${inv.id}')" style="font-size:10px;padding:4px 8px">Satış Gir →</button>
+    </div>`;
+  }
+
+  return `<div class="inv-card ${cardCls}">
+    <div class="inv-acts">
+      <button onclick="openInvModal('${inv.id}')">✏️</button>
+      <button onclick="deleteInvestment('${inv.id}')">🗑</button>
+    </div>
+    <div class="inv-card-top">
+      <span class="inv-type-badge ${badge}">${typeEmoji} ${inv.type}</span>
+      ${statusHtml}
+    </div>
+    <div class="inv-name">${inv.name}</div>
+    <div class="inv-sub">${inv.buyDate ? new Date(inv.buyDate).toLocaleDateString('tr-TR') : ''} · ${days} gün önce alındı</div>
+    <div class="inv-row"><span class="inv-row-lbl">Miktar</span><span class="inv-row-val">${inv.qty} birim</span></div>
+    <div class="inv-row"><span class="inv-row-lbl">Alış Fiyatı</span><span class="inv-row-val">${fmt(inv.buyPrice)} / birim</span></div>
+    <div class="inv-row"><span class="inv-row-lbl">Toplam Maliyet</span><span class="inv-row-val">${fmt(r.cost)}</span></div>
+    ${inv.sellPrice ? `<div class="inv-row"><span class="inv-row-lbl">Satış Fiyatı</span><span class="inv-row-val" style="color:var(--g)">${fmt(inv.sellPrice)} / birim</span></div>` : ''}
+    ${r.live ? `<div class="inv-row"><span class="inv-row-lbl">Güncel Fiyat</span><span class="inv-row-val" style="color:var(--b)">${fmt(r.currentPrice)} / birim</span></div><div class="inv-row"><span class="inv-row-lbl">Güncel Değer</span><span class="inv-row-val" style="color:var(--b)">${fmt(r.currentValue)}</span></div>` : ''}
+    ${pnlHtml}
+  </div>`;
+}
+
+async function refreshRates() {
+  ratesLastFetch = 0;
+  showToast('🔄', 'Kurlar güncelleniyor…');
+  await renderInvestments();
+  showToast('✅', 'Kurlar güncellendi!');
+}
+
+// ── INVESTMENT MODAL ──────────────────────────────────────────
+let editingInvId = null;
+
+function openInvModal(id) {
+  editingInvId = id || null;
+  if(id) {
+    const inv = investments().find(i => i.id === id);
+    if(inv) {
+      document.getElementById('invType').value     = inv.type;
+      document.getElementById('invName').value     = inv.name;
+      document.getElementById('invQty').value      = inv.qty;
+      document.getElementById('invBuyPrice').value = inv.buyPrice;
+      document.getElementById('invBuyDate').value  = inv.buyDate || '';
+      document.getElementById('invFee').value      = inv.fee || '';
+      document.getElementById('invSellPrice').value= inv.sellPrice || '';
+      document.getElementById('invSellDate').value = inv.sellDate || '';
+      document.getElementById('invModalTitle').textContent = 'Yatırımı Düzenle';
+    }
+  } else {
+    document.getElementById('invType').value     = 'Altın';
+    document.getElementById('invName').value     = '';
+    document.getElementById('invQty').value      = '';
+    document.getElementById('invBuyPrice').value = '';
+    document.getElementById('invBuyDate').value  = new Date().toISOString().split('T')[0];
+    document.getElementById('invFee').value      = '';
+    document.getElementById('invSellPrice').value= '';
+    document.getElementById('invSellDate').value = '';
+    document.getElementById('invModalTitle').textContent = 'Yeni Yatırım Ekle';
+  }
+  document.getElementById('invModalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('invName').focus(), 100);
+}
+
+function closeInvModal(e) {
+  if(!e || e.target === document.getElementById('invModalOverlay'))
+    document.getElementById('invModalOverlay').classList.remove('open');
+}
+
+async function saveInvestment() {
+  const name      = document.getElementById('invName').value.trim();
+  const type      = document.getElementById('invType').value;
+  const qty       = parseFloat(document.getElementById('invQty').value);
+  const buyPrice  = parseFloat(document.getElementById('invBuyPrice').value);
+  const buyDate   = document.getElementById('invBuyDate').value;
+  const fee       = parseFloat(document.getElementById('invFee').value) || 0;
+  const sellPrice = parseFloat(document.getElementById('invSellPrice').value) || null;
+  const sellDate  = document.getElementById('invSellDate').value || null;
+
+  if(!name)     { showToast('⚠️','Yatırım adı giriniz!'); return; }
+  if(!qty||qty<=0) { showToast('⚠️','Geçerli miktar giriniz!'); return; }
+  if(!buyPrice||buyPrice<=0) { showToast('⚠️','Alış fiyatı giriniz!'); return; }
+  if(!buyDate)  { showToast('⚠️','Alış tarihi seçiniz!'); return; }
+
+  const obj = {
+    id: editingInvId || uid(),
+    type, name, qty, buyPrice, buyDate, fee,
+    sellPrice: sellPrice || null,
+    sellDate: sellDate || null,
+  };
+  await window._saveInvestment(obj);
+  closeInvModal();
+  showToast('✅', editingInvId ? 'Yatırım güncellendi!' : `"${name}" eklendi!`);
+  if(currentView === 'investments') renderInvestments();
+}
+
+async function deleteInvestment(id) {
+  const inv = investments().find(i => i.id === id);
+  if(!inv) return;
+  if(!confirm(`"${inv.name}" yatırımını silmek istiyor musunuz?`)) return;
+  await window._deleteInvestment(id);
+  showToast('🗑️', 'Yatırım silindi.');
+  if(currentView === 'investments') renderInvestments();
+}
+
 // ── UPDATE ALL ────────────────────────────────────────────────
 function updateAll(){
   renderSidebar();renderMainContent();
-  if(currentView!=='cashflow'){updateStats();renderTransactions();renderDonut();renderBar();}
+  if(currentView!=='cashflow'&&currentView!=='investments'){updateStats();renderTransactions();renderDonut();renderBar();}
+  // Update nav badge
+  const badge = document.getElementById('inv-nav-badge');
+  if(badge) { const n=investments().filter(i=>!i.sellPrice).length; badge.textContent=n>0?n+' açık':''; }
 }
 
 // ── TX MODAL ─────────────────────────────────────────────────
@@ -1335,7 +1749,7 @@ function toggleUserMenu(){document.getElementById('userMenu').classList.toggle('
 document.addEventListener('click',e=>{if(!document.getElementById('userProfile').contains(e.target))document.getElementById('userMenu').classList.remove('open');});
 function showToast(icon,msg){const t=document.getElementById('toast');document.getElementById('toastIcon').textContent=icon;document.getElementById('toastMsg').textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2700);}
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeTxModal();closeAccModal();closeSubModal();}
+  if(e.key==='Escape'){closeTxModal();closeAccModal();closeSubModal();closeInvModal();}
   if(e.key==='Enter'){
     if(document.getElementById('txModalOverlay').classList.contains('open'))saveTransaction();
     else if(document.getElementById('accModalOverlay').classList.contains('open'))saveAccount();
@@ -1344,7 +1758,25 @@ document.addEventListener('keydown',e=>{
 });
 </script>
 
+<!-- PWA: inline manifest via blob -->
 <script>
-// PWA manifest
-document.getElementById('manifestLink').href = './manifest.json';
+const manifest = {
+  name: "Beyefendi Nakitakışı",
+  short_name: "Beyefendi",
+  description: "Kişisel Finans Kontrol Paneli",
+  start_url: "./",
+  display: "standalone",
+  background_color: "#0c0c12",
+  theme_color: "#0c0c12",
+  orientation: "any",
+  icons: [
+    { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23d4a843'/><text y='.9em' font-size='80' x='10'>👔</text></svg>", sizes: "192x192", type: "image/svg+xml" },
+    { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23d4a843'/><text y='.9em' font-size='80' x='10'>👔</text></svg>", sizes: "512x512", type: "image/svg+xml" }
+  ]
+};
+const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+const url  = URL.createObjectURL(blob);
+document.getElementById('manifestLink').href = url;
 </script>
+</body>
+</html>
