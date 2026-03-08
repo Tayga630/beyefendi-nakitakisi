@@ -740,7 +740,7 @@ body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-he
     <div class="form-group"><label class="form-label">Açıklama / Not</label><input class="form-input" id="subNote" placeholder="Örn: USD birikimi, 22 ayar…"></div>
     <div class="form-group">
       <label class="form-label">Para Birimi (opsiyonel — boş bırakılırsa ana hesaptan alır)</label>
-      <select class="form-input" id="subCurrency">
+      <select class="form-input" id="subCurrency" onchange="updateSubBalanceLabel(currentParentForSub)">
         <option value="">↑ Ana hesapla aynı</option>
         <option value="TRY">🇹🇷 TRY — Türk Lirası</option>
         <option value="USD">🇺🇸 USD — Amerikan Doları</option>
@@ -753,7 +753,11 @@ body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-he
         <option value="XAU">🥇 XAU — Altın (gram)</option>
       </select>
     </div>
-    <div class="form-group"><label class="form-label" id="subBalanceLbl">Başlangıç Bakiyesi</label><input class="form-input" id="subBalance" type="number" step="0.01" placeholder="0,00"></div>
+    <div class="form-group">
+      <label class="form-label" id="subBalanceLbl">Başlangıç Bakiyesi</label>
+      <input class="form-input" id="subBalance" type="number" step="any" placeholder="0,00" oninput="updateSubGoldHint()">
+      <div id="subBalanceHint" style="display:none;margin-top:6px;padding:9px 12px;background:var(--gold-bg);border:1px solid rgba(212,168,67,.2);border-radius:var(--radius-sm);font-size:11px;color:var(--gold);font-family:'DM Mono',monospace"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" style="flex:1" onclick="closeSubModal()">İptal</button>
       <button class="btn btn-blue" style="flex:2" onclick="saveSubAccount()">Kaydet</button>
@@ -1124,8 +1128,20 @@ function accBalanceTRY(id){
   const mainTRY=toTRY(bal,cur);
   return (mainTRY!==null?mainTRY:bal)+subsTotal;
 }
+function goldGramToTRY(grams) {
+  // Returns TRY value of given grams using live rate, or null if unknown
+  if(liveRates['XAU_GRAM']) return grams * liveRates['XAU_GRAM'];
+  return null;
+}
+
 function subBalance(sid){
-  const sub=getSub(sid); let b=sub?(sub.initialBalance||0):0;
+  const sub=getSub(sid);
+  const sc=sub?.currency||'TRY';
+  const initGrams=sc==='XAU'?(sub?.initialBalance||0):0;
+  const initTRY=sc==='XAU'
+    ? (goldGramToTRY(initGrams) ?? 0)  // grams → TRY via live rate; 0 if unknown
+    : (sub?.initialBalance||0);
+  let b=initTRY;
   transactions().forEach(t=>{
     if(t.subAccountId===sid)b+=t.type==='income'?t.amount:-t.amount;
     if(t.type==='transfer'){if(t.fromSubId===sid)b-=t.amount;if(t.toSubId===sid)b+=t.amount;}
@@ -1135,11 +1151,15 @@ function subBalance(sid){
 function subCurrency(sid){ const s=getSub(sid); if(!s)return'TRY'; return s.currency||accCurrency(s.parentId)||'TRY'; }
 function totalNet(){ return accounts().reduce((s,a)=>s+accBalanceTRY(a.id),0); }
 
-// Gold gram total for a sub-account (sum goldGram of transactions)
+// Gold gram total for a sub-account (initialBalance in grams + transaction grams)
 function subGoldGrams(sid){
-  return transactions().filter(t=>t.subAccountId===sid&&t.goldGram).reduce((s,t)=>{
+  const sub=getSub(sid);
+  const sc=sub?.currency||'TRY';
+  const initGrams=sc==='XAU'?(sub?.initialBalance||0):0;
+  const txGrams=transactions().filter(t=>t.subAccountId===sid&&t.goldGram).reduce((s,t)=>{
     return s+(t.type==='income'?t.goldGram:t.type==='expense'?-t.goldGram:0);
   },0);
+  return initGrams+txGrams;
 }
 function accGoldGrams(accId){
   return transactions().filter(t=>t.accountId===accId&&t.goldGram).reduce((s,t)=>{
@@ -1553,6 +1573,12 @@ async function fetchLiveRates() {
       ['USD','EUR','GBP','CHF','JPY','SAR','AED'].forEach(c=>{
         if(d.rates[c]) liveRates[c] = 1/d.rates[c];
       });
+      // XAU: open.er-api.com returns troy ounce per TRY → convert to TRY per gram
+      // 1 troy ounce = 31.1035 grams
+      if(d.rates['XAU']) {
+        const tryPerOunce = 1 / d.rates['XAU'];
+        liveRates['XAU_GRAM'] = tryPerOunce / 31.1035; // TRY per gram
+      }
       liveRates.fetchTime = new Date().toLocaleTimeString('tr-TR');
       ratesLastFetch = Date.now();
       // Re-render all displays after rates load so TRY totals update
@@ -1610,11 +1636,15 @@ async function renderInvestments() {
   const livePnL   = open.reduce((s,i) => { const r=calcInvPnL(i); return s+(r.live?r.pnl:0); }, 0);
 
   const rateRows = Object.entries(liveRates)
-    .filter(([k]) => k !== 'fetchTime')
+    .filter(([k]) => k !== 'fetchTime' && k !== 'XAU_GRAM')
     .map(([cur,val]) => `<div class="inv-rate-row">
       <span class="inv-rate-name">💵 ${cur} / TRY</span>
       <span class="inv-rate-val" style="color:var(--b)">₺${val.toFixed(2)}</span>
     </div>`).join('');
+  const goldGramRow = liveRates['XAU_GRAM'] ? `<div class="inv-rate-row">
+    <span class="inv-rate-name">🥇 Gram Altın / TRY</span>
+    <span class="inv-rate-val" style="color:var(--gold)">₺${liveRates['XAU_GRAM'].toFixed(2)}</span>
+  </div>` : '';
 
   c.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
@@ -1638,7 +1668,7 @@ async function renderInvestments() {
     <!-- Live Rates -->
     ${rateRows ? `<div class="card" style="margin-bottom:16px">
       <div class="card-header"><div class="card-title">💵 Anlık Döviz Kurları (TRY)</div></div>
-      <div style="padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px">${rateRows}</div>
+      <div style="padding:12px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px">${goldGramRow}${rateRows}</div>
     </div>` : ''}
 
     <!-- Open Positions -->
@@ -1879,9 +1909,33 @@ function updateAccBalanceLabel(){
 function updateSubBalanceLabel(parentId){
   const subCur=document.getElementById('subCurrency')?.value;
   const cur=subCur||accCurrency(parentId)||'TRY';
-  const c=CURRENCIES[cur]||CURRENCIES.TRY;
   const lbl=document.getElementById('subBalanceLbl');
-  if(lbl)lbl.textContent=`Başlangıç Bakiyesi (${c.sym}${cur})`;
+  const hint=document.getElementById('subBalanceHint');
+  if(cur==='XAU'){
+    if(lbl) lbl.textContent='Başlangıç Bakiyesi (gram)';
+    // Show live TL equivalent as hint
+    updateSubGoldHint();
+  } else {
+    const c=CURRENCIES[cur]||CURRENCIES.TRY;
+    if(lbl) lbl.textContent=`Başlangıç Bakiyesi (${c.sym}${cur})`;
+    if(hint) hint.style.display='none';
+  }
+}
+
+function updateSubGoldHint(){
+  const hint=document.getElementById('subBalanceHint');
+  if(!hint) return;
+  const grams=parseFloat(document.getElementById('subBalance')?.value)||0;
+  if(grams<=0){ hint.style.display='none'; return; }
+  const gramPrice=liveRates['XAU_GRAM'];
+  if(gramPrice){
+    const tryVal=grams*gramPrice;
+    hint.style.display='block';
+    hint.innerHTML=`🥇 ${grams.toLocaleString('tr-TR',{maximumFractionDigits:4})}g × ₺${gramPrice.toLocaleString('tr-TR',{maximumFractionDigits:2})}/g = <strong>₺${tryVal.toLocaleString('tr-TR',{maximumFractionDigits:2})}</strong>`;
+  } else {
+    hint.style.display='block';
+    hint.textContent='⏳ Gram altın fiyatı yükleniyor…';
+  }
 }
 function populateSubAccSelect(dir){
   const accEl=document.getElementById(dir==='from'?'txFromAccount':'txToAccount');
@@ -1995,7 +2049,7 @@ async function deleteAccount(id){
 // ── SUB-ACCOUNT MODAL ─────────────────────────────────────────
 function openSubModal(parentId,subId){
   currentParentForSub=parentId;editingSubId=subId||null;
-  if(subId){const s=getSub(subId);if(s){document.getElementById('subName').value=s.name;document.getElementById('subCatalog').value=s.catalog;document.getElementById('subNote').value=s.note||'';document.getElementById('subCurrency').value=s.currency||'';document.getElementById('subBalance').value=s.initialBalance||0;document.getElementById('subModalTitle').textContent='Alt Hesabı Düzenle';updateSubBalanceLabel(s.parentId);}}
+  if(subId){const s=getSub(subId);if(s){document.getElementById('subName').value=s.name;document.getElementById('subCatalog').value=s.catalog;document.getElementById('subNote').value=s.note||'';document.getElementById('subCurrency').value=s.currency||'';document.getElementById('subBalance').value=s.initialBalance||0;document.getElementById('subModalTitle').textContent='Alt Hesabı Düzenle';updateSubBalanceLabel(s.parentId);setTimeout(updateSubGoldHint,50);}}
   else{const a=getAcc(parentId);document.getElementById('subName').value='';document.getElementById('subCatalog').value='TL';document.getElementById('subNote').value='';document.getElementById('subCurrency').value='';document.getElementById('subBalance').value='';document.getElementById('subModalTitle').textContent=`Alt Hesap Ekle — ${a?.name||''}`;updateSubBalanceLabel(parentId);}
   document.getElementById('subModalOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('subName').focus(),100);
