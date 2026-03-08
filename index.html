@@ -563,7 +563,8 @@ body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-he
       <div style="height:10px;flex-shrink:0"></div>
       <div class="sidebar-footer">
         <strong id="footer-balance">₺0,00</strong>
-        Toplam net varlık
+        Toplam net varlık (TRY)
+        <span id="footer-note" style="display:none;font-size:9px;color:var(--y);display:block">⏳ Kurlar yükleniyor…</span>
       </div>
     </div>
   </aside>
@@ -1072,8 +1073,10 @@ function getRateTRY(cur) {
 }
 
 function toTRY(amount, cur) {
+  // XAU: we store TRY value in t.amount (goldGram × goldPrice), so it's already TRY
+  if(!cur || cur === 'TRY' || cur === 'XAU') return amount;
   const rate = getRateTRY(cur);
-  if(rate === null) return null; // unknown
+  if(rate === null) return null; // unknown — rate not loaded yet
   return amount * rate;
 }
 
@@ -1178,7 +1181,14 @@ function renderSidebar(){
     const cur=accCurrency(a.id);
     const active=currentView===a.id?'active':'';
     const goldGrams=cur==='XAU'?accGoldGrams(a.id):null;
-    const balDisplay=cur==='XAU'?(goldGrams.toLocaleString('tr-TR',{maximumFractionDigits:2})+'g'):cur==='TRY'?fmt(bal):fmtCur(bal,cur);
+    // For TRY accounts, show accBalanceTRY (includes foreign/gold sub-accounts converted)
+    // For foreign accounts, show native balance
+    const tryTotal=accBalanceTRY(a.id);
+    const hasForeignSubs=getSubsOfAcc(a.id).some(s=>(s.currency||cur)!=='TRY');
+    let balDisplay;
+    if(cur==='XAU') balDisplay=(goldGrams.toLocaleString('tr-TR',{maximumFractionDigits:2})+'g');
+    else if(cur!=='TRY') balDisplay=fmtCur(bal,cur);
+    else balDisplay=fmt(tryTotal); // always show TRY total including subs
     html+=`<div class="nav-account ${active}" id="nav-${a.id}" onclick="switchView('${a.id}')">
       <div class="acc-dot" style="background:${a.color}"></div>
       <span style="font-size:15px">${a.emoji}</span>
@@ -1195,7 +1205,12 @@ function renderSidebar(){
       const sb=subBalance(s.id);
       const scur=subCurrency(s.id);
       const sa=currentView===s.id?'active':'';
-      const sbDisplay=scur==='TRY'?fmt(sb):fmtCur(sb,scur);
+      const sbTRY=toTRY(sb,scur); // null if rate unknown
+      let sbDisplay;
+      if(scur==='XAU'){ const g=subGoldGrams(s.id); sbDisplay=g.toLocaleString('tr-TR',{maximumFractionDigits:2})+'g'; }
+      else if(scur==='TRY') sbDisplay=fmt(sb);
+      else if(sbTRY!==null) sbDisplay=fmtCur(sb,scur);
+      else sbDisplay=fmtCur(sb,scur); // show native even if no rate yet
       html+=`<div class="nav-sub ${sa}" id="nav-${s.id}" onclick="switchView('${s.id}')">
         <span class="sub-cat-badge ${ci.cls}">${ci.label}</span>
         <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.name}</span>
@@ -1209,7 +1224,16 @@ function renderSidebar(){
     html+=`<div class="nav-sub-add" onclick="openSubModal('${a.id}')">＋ Alt hesap ekle</div>`;
   });
   document.getElementById('accountNavList').innerHTML=html;
-  document.getElementById('footer-balance').textContent=fmt(totalNet());
+  const tn=totalNet();
+  const ratesReady=Object.keys(liveRates).filter(k=>k!=='fetchTime').length>0;
+  const hasForeignAccs=accounts().some(a=>(a.currency||'TRY')!=='TRY')||subAccounts().some(s=>s.currency&&s.currency!=='TRY'&&s.currency!=='XAU');
+  const footerEl=document.getElementById('footer-balance');
+  if(footerEl){
+    footerEl.textContent=fmt(tn);
+    const footerLbl=footerEl.nextSibling;
+    const footerNote=document.getElementById('footer-note');
+    if(footerNote) footerNote.style.display=(hasForeignAccs&&!ratesReady)?'':'none';
+  }
 }
 
 // ── SWITCH VIEW ───────────────────────────────────────────────
@@ -1283,7 +1307,7 @@ function renderSubAccountsSection(accId){
 </div>
 ${(()=>{
   const sc=subCurrency(s.id);
-  if(sc==='XAU'){const g=subGoldGrams(s.id);const tryBal=bal;return tryBal!==0?`<div style="font-size:9.5px;color:var(--muted);font-family:'DM Mono',monospace">≈${fmt(tryBal)} TL</div>`:'';};
+  if(sc==='XAU'){return bal!==0?`<div style="font-size:9.5px;color:var(--muted);font-family:'DM Mono',monospace">≈${fmt(bal)} TL</div>`:'';}
   if(sc==='TRY')return'';
   const tv=toTRY(bal,sc);return tv!==null?`<div style="font-size:9.5px;color:var(--muted);font-family:'DM Mono',monospace">≈${fmt(tv)}</div>`:curBadge(sc);
 })()}<div style="font-size:9.5px;color:var(--muted);margin-top:3px;font-family:'DM Mono',monospace">${transactions().filter(t=>t.subAccountId===s.id||t.fromSubId===s.id||t.toSubId===s.id).length} işlem</div></div>`;}).join('')}</div></div>`;
@@ -1293,10 +1317,10 @@ function renderOverview(){
   if(!accounts().length)return`<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:46px;margin-bottom:14px">👔</div><div style="font-size:17px;font-weight:700;margin-bottom:7px;color:var(--text)">Beyefendi, henüz hesap eklenmemiş</div><div style="font-size:12px;margin-bottom:18px">Soldaki ＋ butonuyla hesap ekleyin</div><button class="btn btn-gold" onclick="openAccountModal()">＋ İlk Hesabı Ekle</button></div>`;
   const tI=transactions().filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
   const tE=transactions().filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-  return`<div class="acc-overview-grid">${accounts().map(a=>{const bal=accBalance(a.id),cur=accCurrency(a.id),subs=getSubsOfAcc(a.id);return`<div class="account-card" onclick="switchView('${a.id}')"><div class="ac-bar" style="background:${a.color}"></div><div class="ac-top"><span class="ac-emoji">${a.emoji}</span><div class="ac-actions"><button onclick="event.stopPropagation();openAccountModal('${a.id}')">✏️</button><button onclick="event.stopPropagation();deleteAccount('${a.id}')">🗑</button></div></div><div class="ac-name">${a.name}</div><div class="ac-type" style="color:${a.color}">${a.type}</div><div class="ac-balance" style="color:${bal>=0?'var(--g)':'var(--r)'}">
-  ${cur==='XAU'?(accGoldGrams(a.id).toLocaleString('tr-TR',{maximumFractionDigits:4})+'g'):cur!=='TRY'?fmtCur(bal,cur):fmt(bal)}
+  return`<div class="acc-overview-grid">${accounts().map(a=>{const bal=accBalance(a.id),cur=accCurrency(a.id),subs=getSubsOfAcc(a.id);return`<div class="account-card" onclick="switchView('${a.id}')"><div class="ac-bar" style="background:${a.color}"></div><div class="ac-top"><span class="ac-emoji">${a.emoji}</span><div class="ac-actions"><button onclick="event.stopPropagation();openAccountModal('${a.id}')">✏️</button><button onclick="event.stopPropagation();deleteAccount('${a.id}')">🗑</button></div></div><div class="ac-name">${a.name}</div><div class="ac-type" style="color:${a.color}">${a.type}</div><div class="ac-balance" style="color:${accBalanceTRY(a.id)>=0?'var(--g)':'var(--r)'}">
+  ${cur==='XAU'?(accGoldGrams(a.id).toLocaleString('tr-TR',{maximumFractionDigits:4})+'g'):cur!=='TRY'?fmtCur(bal,cur):fmt(accBalanceTRY(a.id))}
 </div>
-${cur==='XAU'?`<div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">≈${fmt(bal)} TL</div>`:cur!=='TRY'?`<div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">≈${fmt(accBalanceTRY(a.id))}</div>`:''}
+${cur!=='TRY'?`<div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">≈${fmt(accBalanceTRY(a.id))} TL</div>`:''}
 ${curBadge(cur)}<div class="ac-sub">${transactions().filter(t=>t.accountId===a.id||t.fromAccountId===a.id||t.toAccountId===a.id).length} işlem</div>${subs.length?`<div class="sub-chips">${subs.map(s=>{const ci=CAT_MAP[s.catalog]||CAT_MAP['Diğer'];return`<span class="sub-chip ${ci.cls}" onclick="event.stopPropagation();switchView('${s.id}')">${ci.label} ${s.name}</span>`;}).join('')}</div>`:''}</div>`;}).join('')}<div class="add-account-card" onclick="openAccountModal()"><div style="font-size:24px">＋</div><div style="font-size:12px;font-weight:700">Hesap Ekle</div></div></div><div class="total-summary"><div><div class="ts-label">Toplam Varlık</div><div class="ts-val" style="color:var(--gold)">${fmt(totalNet())}</div></div><div><div class="ts-label">Toplam Gelir</div><div class="ts-val" style="color:var(--g)">${fmt(tI)}</div></div><div><div class="ts-label">Toplam Gider</div><div class="ts-val" style="color:var(--r)">${fmt(tE)}</div></div><div><div class="ts-label">Net</div><div class="ts-val" style="color:${tI-tE>=0?'var(--g)':'var(--r)'}">${tI-tE>=0?'▲ Kârlı':'▼ Zararda'}</div></div><div><div class="ts-label">Hesap</div><div class="ts-val" style="color:var(--text)">${accounts().length}</div></div><div><div class="ts-label">Alt Hesap</div><div class="ts-val" style="color:var(--b)">${subAccounts().length}</div></div></div>`;
 }
 
@@ -1504,6 +1528,8 @@ async function fetchLiveRates() {
       });
       liveRates.fetchTime = new Date().toLocaleTimeString('tr-TR');
       ratesLastFetch = Date.now();
+      // Re-render all displays after rates load so TRY totals update
+      if(typeof updateAll === 'function') updateAll();
     }
   } catch(e) { console.warn('Rate fetch failed', e); }
   return liveRates;
