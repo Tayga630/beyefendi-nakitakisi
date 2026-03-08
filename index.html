@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0c0c12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Beyefendi">
+<meta name="description" content="Beyefendi Nakitakışı — Kişisel Finans Yönetimi">
+<title>Beyefendi Nakitakışı</title>
+<link rel="manifest" href="#" id="manifestLink">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0c0c12; --surface:#14141e; --surface2:#1e1e2e; --surface3:#252538;
+  --border:#2e2e45; --text:#eaeaf4; --muted:#6a6a90;
+  --gold:#d4a843; --gold2:#f5c842; --gold-bg:rgba(212,168,67,.08);
+  --g:#00e5a0; --r:#ff4d6d; --b:#5b8af5; --y:#f5c542; --p:#b24bff; --o:#ff8c42;
+  --radius:16px; --radius-sm:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* ── AUTH SCREEN ── */
+#authScreen {
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:1000;gap:0;
+}
+.auth-card {
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:24px;padding:48px 40px;width:400px;max-width:92vw;
+  text-align:center;position:relative;overflow:hidden;
+}
+.auth-card::before {
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--gold),var(--b),var(--g));
+}
+.auth-logo {
+  width:64px;height:64px;
+  background:linear-gradient(135deg,var(--gold),var(--b));
+  border-radius:18px;display:grid;place-items:center;
+  font-size:30px;margin:0 auto 20px;
+  box-shadow:0 8px 32px rgba(212,168,67,.3);
+}
+.auth-title {
+  font-family:'Playfair Display',serif;
+  font-size:22px;font-weight:900;color:var(--gold);
+  margin-bottom:6px;
+}
+.auth-sub {font-size:12px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:32px;font-family:'DM Mono',monospace;}
+.auth-desc {font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:32px;}
+.auth-desc strong {color:var(--text);}
+
+.btn-google {
+  width:100%;padding:14px 20px;
+  background:#fff;color:#1a1a1a;
+  border:none;border-radius:var(--radius-sm);
+  font-family:'Syne',sans-serif;font-size:14px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;
+  transition:all .2s;box-shadow:0 2px 12px rgba(0,0,0,.3);
+}
+.btn-google:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.4);}
+.btn-google:active{transform:translateY(0);}
+.google-icon {width:20px;height:20px;flex-shrink:0;}
+
+.auth-note {font-size:11px;color:var(--muted);margin-top:20px;line-height:1.6;}
+.auth-error {
+  background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.3);
+  border-radius:var(--radius-sm);padding:12px;margin-top:16px;
+  font-size:12px;color:var(--r);display:none;
+}
+.auth-loading {
+  display:none;flex-direction:column;align-items:center;gap:14px;
+  position:absolute;inset:0;background:var(--surface);
+  border-radius:24px;justify-content:center;
+}
+.spinner {
+  width:36px;height:36px;border:3px solid var(--border);
+  border-top-color:var(--gold);border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sync-indicator {
+  display:none;position:fixed;top:14px;right:18px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:20px;padding:5px 12px;font-size:11px;
+  color:var(--muted);font-family:'DM Mono',monospace;z-index:200;
+  align-items:center;gap:6px;
+}
+.sync-indicator.show{display:flex;}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:pulse 1.2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── APP LAYOUT ── */
+.app{display:flex;height:100vh;overflow:hidden;opacity:0;transition:opacity .3s;}
+.app.ready{opacity:1;}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:280px;min-width:280px;background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  transition:transform .3s ease;z-index:100;overflow:hidden;
+}
+.sidebar-inner{display:flex;flex-direction:column;height:100%;overflow-y:auto;padding:20px 14px;gap:2px;}
+.sidebar-inner::-webkit-scrollbar{width:3px;}
+.sidebar-inner::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.logo{display:flex;align-items:center;gap:11px;padding:4px 8px 16px;}
+.logo-icon{
+  width:36px;height:36px;
+  background:linear-gradient(135deg,var(--gold),var(--b));
+  border-radius:10px;display:grid;place-items:center;font-size:17px;
+  box-shadow:0 3px 12px rgba(212,168,67,.2);
+}
+.logo-name{font-family:'Playfair Display',serif;font-size:13px;font-weight:900;color:var(--gold);line-height:1.1;}
+.logo-sub{font-size:8.5px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;font-family:'DM Mono',monospace;}
+
+/* user profile in sidebar */
+.user-profile{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 10px;margin-bottom:6px;
+  background:var(--gold-bg);border:1px solid rgba(212,168,67,.15);
+  border-radius:var(--radius-sm);cursor:pointer;transition:all .2s;
+  position:relative;
+}
+.user-profile:hover{border-color:rgba(212,168,67,.3);}
+.user-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid rgba(212,168,67,.3);}
+.user-avatar-placeholder{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--b));display:grid;place-items:center;font-size:14px;flex-shrink:0;}
+.user-info{flex:1;min-width:0;}
+.user-name{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-email{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'DM Mono',monospace;}
+.user-menu{
+  position:absolute;bottom:calc(100% + 6px);left:0;right:0;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);overflow:hidden;
+  display:none;z-index:50;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+.user-menu.open{display:block;}
+.user-menu-item{
+  display:flex;align-items:center;gap:9px;
+  padding:11px 14px;font-size:13px;font-weight:600;
+  cursor:pointer;transition:background .15s;color:var(--muted);
+}
+.user-menu-item:hover{background:var(--surface3);color:var(--text);}
+.user-menu-item.danger:hover{color:var(--r);}
+
+.nav-section-label{
+  font-size:9.5px;font-weight:700;color:var(--muted);
+  letter-spacing:2.5px;text-transform:uppercase;
+  padding:10px 8px 4px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.nav-section-label button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:1px 3px;transition:color .2s;line-height:1;}
+.nav-section-label button:hover{color:var(--gold);}
+.nav-account{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);transition:all .2s;border:1px solid transparent;position:relative;}
+.nav-account:hover{background:var(--surface2);color:var(--text);}
+.nav-account.active{background:rgba(212,168,67,.08);color:var(--gold);border-color:rgba(212,168,67,.2);}
+.nav-account .nav-lbl{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.nav-account .nav-badge{font-size:9.5px;font-family:'DM Mono',monospace;color:var(--muted);flex-shrink:0;}
+.nav-account.active .nav-badge{color:var(--gold);}
+.nav-account .nav-acts{display:none;gap:3px;}
+.nav-account:hover .nav-acts{display:flex;}
+.nav-acts button{background:none;border:none;cursor:pointer;font-size:11px;padding:2px 3px;border-radius:4px;color:var(--muted);transition:all .2s;}
+.nav-acts button:hover{color:var(--text);background:var(--border);}
+.acc-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.nav-sub{display:flex;align-items:center;gap:8px;padding:7px 10px 7px 28px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;font-weight:500;color:var(--muted);transition:all .2s;border:1px solid transparent;}
+.nav-sub:hover{background:var(--surface2);color:var(--text);}
+.nav-sub.active{background:rgba(91,138,245,.06);color:var(--b);border-color:rgba(91,138,245,.15);}
+.sub-cat-badge{font-size:9px;padding:1px 5px;border-radius:3px;font-family:'DM Mono',monospace;font-weight:600;background:var(--surface3);color:var(--muted);flex-shrink:0;}
+.nav-sub .nav-acts-s{display:none;gap:2px;margin-left:auto;}
+.nav-sub:hover .nav-acts-s{display:flex;}
+.nav-sub-add{display:flex;align-items:center;gap:8px;padding:6px 10px 6px 28px;border-radius:var(--radius-sm);cursor:pointer;font-size:11px;font-weight:600;color:var(--muted);transition:all .2s;}
+.nav-sub-add:hover{color:var(--b);}
+.nav-item-plain{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);transition:all .2s;border:1px solid transparent;}
+.nav-item-plain:hover{background:var(--surface2);color:var(--text);}
+.nav-item-plain.active{background:rgba(0,229,160,.07);color:var(--g);border-color:rgba(0,229,160,.18);}
+.sidebar-footer{margin-top:auto;padding:13px 11px;background:var(--gold-bg);border:1px solid rgba(212,168,67,.15);border-radius:var(--radius-sm);font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;flex-shrink:0;margin-top:12px;}
+.sidebar-footer strong{color:var(--gold);font-size:15px;display:block;margin-bottom:2px;font-family:'Syne',sans-serif;}
+
+/* ── MAIN ── */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 26px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(12,12,18,.96);z-index:50;backdrop-filter:blur(14px);gap:10px;flex-wrap:wrap;}
+.topbar-left{display:flex;align-items:center;gap:13px;}
+.topbar-title{font-size:17px;font-weight:700;}
+.topbar-subtitle{font-size:10.5px;color:var(--muted);font-family:'DM Mono',monospace;}
+.topbar-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
+.btn{padding:8px 14px;border-radius:var(--radius-sm);font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border:none;transition:all .2s;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.btn-ghost:hover{border-color:var(--muted);}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#c4943a);color:#0c0c12;}
+.btn-gold:hover{filter:brightness(1.1);}
+.btn-green{background:var(--g);color:#0a0f0d;}
+.btn-green:hover{filter:brightness(1.1);}
+.btn-red{background:var(--r);color:#fff;}
+.btn-red:hover{filter:brightness(1.1);}
+.btn-blue{background:var(--b);color:#fff;}
+.btn-blue:hover{filter:brightness(1.1);}
+.btn-sm{padding:6px 11px;font-size:11.5px;}
+
+/* ── CONTENT ── */
+.content{padding:22px 26px;flex:1;}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:20px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden;transition:transform .2s;}
+.stat-card:hover{transform:translateY(-2px);}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.stat-card.green::before{background:var(--g);}
+.stat-card.red::before{background:var(--r);}
+.stat-card.blue::before{background:var(--b);}
+.stat-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;}
+.stat-value{font-size:22px;font-weight:800;font-family:'DM Mono',monospace;letter-spacing:-1px;margin-bottom:4px;}
+.stat-card.green .stat-value{color:var(--g);}
+.stat-card.red .stat-value{color:var(--r);}
+.stat-card.blue .stat-value{color:var(--b);}
+.stat-sub{font-size:10.5px;color:var(--muted);}
+.stat-icon{position:absolute;top:15px;right:15px;font-size:22px;opacity:.1;}
+.two-col{display:grid;grid-template-columns:1fr 350px;gap:16px;align-items:start;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
+.card-title{font-size:13.5px;font-weight:700;}
+.filter-row{display:flex;gap:5px;padding:11px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.filter-btn{padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Syne',sans-serif;transition:all .2s;}
+.filter-btn:hover{border-color:var(--muted);color:var(--text);}
+.filter-btn.active{background:var(--surface2);border-color:var(--b);color:var(--b);}
+.tx-list{max-height:440px;overflow-y:auto;}
+.tx-list::-webkit-scrollbar{width:3px;}
+.tx-list::-webkit-scrollbar-thumb{background:var(--border);}
+.tx-item{display:flex;align-items:center;gap:11px;padding:11px 18px;border-bottom:1px solid rgba(46,46,69,.5);transition:background .15s;cursor:pointer;}
+.tx-item:hover{background:var(--surface2);}
+.tx-item:last-child{border-bottom:none;}
+.tx-icon{width:37px;height:37px;border-radius:10px;display:grid;place-items:center;font-size:15px;flex-shrink:0;}
+.tx-info{flex:1;min-width:0;}
+.tx-name{font-size:12.5px;font-weight:600;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tx-meta{font-size:10px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.tx-cat-chip{font-size:9px;padding:1px 5px;border-radius:3px;font-family:'DM Mono',monospace;font-weight:700;background:var(--surface3);}
+.tx-acc-chip{font-size:9px;padding:1px 5px;border-radius:3px;font-family:'DM Mono',monospace;border:1px solid;}
+.tx-date{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;flex-shrink:0;}
+.tx-amount{font-family:'DM Mono',monospace;font-size:13px;font-weight:600;min-width:86px;text-align:right;flex-shrink:0;}
+.tx-amount.income{color:var(--g);}
+.tx-amount.expense{color:var(--r);}
+.tx-amount.transfer{color:var(--b);}
+.chart-wrap{padding:16px;display:flex;flex-direction:column;align-items:center;}
+.donut-container{position:relative;width:150px;height:150px;margin-bottom:16px;}
+.donut-svg{transform:rotate(-90deg);}
+.donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;}
+.donut-center-val{font-size:16px;font-weight:800;font-family:'DM Mono',monospace;}
+.donut-center-lbl{font-size:8px;color:var(--muted);font-weight:700;letter-spacing:1px;}
+.legend{width:100%;display:flex;flex-direction:column;gap:6px;}
+.legend-item{display:flex;align-items:center;gap:7px;font-size:11px;}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.legend-name{flex:1;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.legend-val{font-family:'DM Mono',monospace;font-size:11px;}
+.legend-pct{font-size:9.5px;color:var(--muted);font-family:'DM Mono',monospace;width:24px;text-align:right;}
+.bar-chart{padding:0 18px 16px;}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.bar-lbl{font-size:9.5px;color:var(--muted);width:24px;font-family:'DM Mono',monospace;}
+.bar-track{flex:1;height:6px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+.bar-amt{font-size:9.5px;color:var(--muted);width:66px;text-align:right;font-family:'DM Mono',monospace;}
+
+/* ── CASHFLOW ── */
+.cf-section{margin-bottom:24px;}
+.cf-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:800;color:var(--gold);margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.cf-period-tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;}
+.cf-tab{padding:7px 16px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Syne',sans-serif;transition:all .2s;}
+.cf-tab:hover{border-color:var(--muted);color:var(--text);}
+.cf-tab.active{background:var(--gold-bg);border-color:rgba(212,168,67,.4);color:var(--gold);}
+.cf-chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+.cf-chart-title{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;}
+.cf-bars{display:flex;align-items:flex-end;gap:4px;height:120px;}
+.cf-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;position:relative;}
+.cf-bar-income{width:100%;border-radius:4px 4px 0 0;background:rgba(0,229,160,.5);position:absolute;bottom:0;transition:height .5s cubic-bezier(.4,0,.2,1);}
+.cf-bar-expense{width:46%;border-radius:4px 4px 0 0;background:rgba(255,77,109,.6);position:absolute;bottom:0;right:0;transition:height .5s cubic-bezier(.4,0,.2,1);}
+.cf-bar-lbl{font-size:9px;font-family:'DM Mono',monospace;color:var(--muted);position:absolute;bottom:-16px;white-space:nowrap;}
+.cf-chart-bottom{height:20px;}
+.cf-sum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.cf-sum-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;position:relative;overflow:hidden;}
+.cf-sum-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.cf-sum-card.cf-inc::before{background:var(--g);}
+.cf-sum-card.cf-exp::before{background:var(--r);}
+.cf-sum-card.cf-net::before{background:var(--b);}
+.cf-sum-card.cf-gold::before{background:var(--gold);}
+.cf-sum-lbl{font-size:9px;font-weight:700;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;}
+.cf-sum-val{font-family:'DM Mono',monospace;font-size:16px;font-weight:700;}
+.cf-table{width:100%;border-collapse:collapse;font-size:12px;}
+.cf-table th{text-align:left;padding:8px 12px;font-size:9.5px;font-weight:700;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid var(--border);}
+.cf-table td{padding:10px 12px;border-bottom:1px solid rgba(46,46,69,.4);font-family:'DM Mono',monospace;font-size:12px;}
+.cf-table tr:last-child td{border-bottom:none;}
+.cf-table tr:hover td{background:var(--surface2);}
+.cf-insight{background:var(--gold-bg);border:1px solid rgba(212,168,67,.2);border-radius:var(--radius-sm);padding:16px;margin-bottom:14px;}
+.cf-insight-title{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+.cf-insight p{font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:6px;}
+.cf-insight p:last-child{margin-bottom:0;}
+.cf-insight strong{color:var(--text);}
+
+/* ── OVERVIEW ── */
+.acc-overview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:20px;}
+.account-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden;}
+.account-card:hover{transform:translateY(-3px);}
+.ac-bar{position:absolute;top:0;left:0;right:0;height:3px;}
+.ac-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+.ac-emoji{font-size:24px;}
+.ac-actions{display:none;gap:3px;}
+.account-card:hover .ac-actions{display:flex;}
+.ac-actions button{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:2px 6px;cursor:pointer;font-size:10px;color:var(--muted);transition:all .2s;}
+.ac-actions button:hover{color:var(--text);border-color:var(--muted);}
+.ac-name{font-size:14px;font-weight:700;margin-bottom:2px;}
+.ac-type{font-size:9.5px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
+.ac-balance{font-family:'DM Mono',monospace;font-size:20px;font-weight:700;}
+.ac-sub{font-size:9.5px;color:var(--muted);margin-top:4px;font-family:'DM Mono',monospace;}
+.sub-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
+.sub-chip{font-size:10px;padding:2px 7px;border-radius:4px;font-family:'DM Mono',monospace;font-weight:600;background:var(--surface3);color:var(--muted);border:1px solid var(--border);cursor:pointer;transition:all .15s;}
+.sub-chip:hover{color:var(--text);border-color:var(--muted);}
+.add-account-card{background:transparent;border:2px dashed var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;transition:all .25s;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:150px;gap:8px;color:var(--muted);}
+.add-account-card:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-bg);}
+.total-summary{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 22px;display:flex;gap:26px;flex-wrap:wrap;margin-bottom:20px;}
+.ts-label{font-size:9.5px;font-weight:700;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;}
+.ts-val{font-family:'DM Mono',monospace;font-size:18px;font-weight:700;}
+
+/* ── SUB-ACCOUNTS ── */
+.sub-accounts-section{margin-bottom:20px;}
+.sub-accounts-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.sub-accounts-title{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.sub-acc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+.sub-acc-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;cursor:pointer;transition:all .2s;position:relative;}
+.sub-acc-card:hover{border-color:var(--muted);background:var(--surface3);}
+.sub-acc-card.active-sub{border-color:var(--b);}
+.sac-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.sac-catalog{font-size:8.5px;padding:2px 6px;border-radius:3px;font-family:'DM Mono',monospace;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.sac-name{font-size:12px;font-weight:700;margin-bottom:4px;}
+.sac-balance{font-family:'DM Mono',monospace;font-size:16px;font-weight:700;}
+.sac-acts{display:none;gap:3px;position:absolute;top:8px;right:8px;}
+.sub-acc-card:hover .sac-acts{display:flex;}
+.sac-acts button{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:2px 5px;cursor:pointer;font-size:10px;color:var(--muted);transition:all .2s;}
+
+/* catalog colors */
+.cat-tl{background:rgba(0,229,160,.12);color:var(--g);}
+.cat-altin{background:rgba(212,168,67,.12);color:var(--gold);}
+.cat-doviz{background:rgba(91,138,245,.12);color:var(--b);}
+.cat-kripto{background:rgba(178,75,255,.12);color:var(--p);}
+.cat-bono{background:rgba(255,140,66,.12);color:var(--o);}
+.cat-diger{background:rgba(107,107,144,.12);color:var(--muted);}
+
+/* ── MODALS ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(9px);z-index:300;display:none;place-items:center;padding:20px;}
+.modal-overlay.open{display:grid;animation:fadeIn .2s ease;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(26px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:26px;width:430px;max-width:95vw;animation:slideUp .25s ease;max-height:90vh;overflow-y:auto;}
+.modal::-webkit-scrollbar{width:3px;}
+.modal::-webkit-scrollbar-thumb{background:var(--border);}
+.modal-title{font-size:16px;font-weight:800;margin-bottom:20px;}
+.form-group{margin-bottom:14px;}
+.form-label{display:block;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:6px;}
+.form-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-family:'Syne',sans-serif;font-size:13px;outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--b);}
+.type-toggle{display:flex;gap:5px;}
+.type-btn{flex:1;padding:9px 5px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'Syne',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center;}
+.type-btn.income.active{background:rgba(0,229,160,.1);border-color:var(--g);color:var(--g);}
+.type-btn.expense.active{background:rgba(255,77,109,.1);border-color:var(--r);color:var(--r);}
+.type-btn.transfer.active{background:rgba(91,138,245,.1);border-color:var(--b);color:var(--b);}
+.modal-actions{display:flex;gap:8px;margin-top:20px;}
+.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;}
+.emoji-btn{padding:5px;border:1px solid transparent;border-radius:5px;background:none;cursor:pointer;font-size:16px;transition:all .15s;text-align:center;}
+.emoji-btn:hover{background:var(--surface2);border-color:var(--border);}
+.emoji-btn.selected{background:rgba(91,138,245,.15);border-color:var(--b);}
+.color-grid{display:flex;gap:7px;flex-wrap:wrap;}
+.color-swatch{width:25px;height:25px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0;}
+.color-swatch.selected{border-color:#fff;transform:scale(1.15);}
+
+/* ── MISC ── */
+.search-wrap{position:relative;}
+.search-input{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 11px 7px 31px;color:var(--text);font-family:'Syne',sans-serif;font-size:12px;outline:none;width:180px;transition:border-color .2s,width .3s;}
+.search-input:focus{border-color:var(--b);width:220px;}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none;}
+.month-select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 9px;color:var(--text);font-family:'Syne',sans-serif;font-size:11.5px;outline:none;cursor:pointer;}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:5px;}
+.hamburger span{display:block;width:20px;height:2px;background:var(--text);border-radius:2px;}
+.empty{padding:40px 24px;text-align:center;color:var(--muted);}
+.empty-icon{font-size:32px;margin-bottom:9px;opacity:.4;}
+.empty-text{font-size:12px;}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 16px;font-size:12.5px;font-weight:600;z-index:500;display:none;align-items:center;gap:9px;box-shadow:0 8px 32px rgba(0,0,0,.55);animation:slideUp .3s ease;}
+.toast.show{display:flex;}
+
+@media(max-width:980px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);box-shadow:8px 0 40px rgba(0,0,0,.6);}
+  .hamburger{display:flex;}
+  .two-col{grid-template-columns:1fr;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .cf-sum-grid{grid-template-columns:1fr 1fr;}
+  .content{padding:14px 12px;}
+  .topbar{padding:12px 14px;}
+}
+@media(max-width:520px){
+  .stats-grid{grid-template-columns:1fr;}
+  .cf-sum-grid{grid-template-columns:1fr 1fr;}
+  .search-input{width:120px;}
+  .search-input:focus{width:150px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ AUTH SCREEN ═══ -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-loading" id="authLoading">
+      <div class="spinner"></div>
+      <div style="font-size:13px;color:var(--muted)" id="loadingText">Bağlanıyor…</div>
+    </div>
+    <div class="auth-logo">👔</div>
+    <div class="auth-title">Beyefendi Nakitakışı</div>
+    <div class="auth-sub">Kişisel Finans Kontrol Paneli</div>
+    <div class="auth-desc">
+      Tüm banka hesaplarınızı, alt hesaplarınızı ve nakit akışınızı<br>
+      <strong>güvenli bulut senkronizasyonu</strong> ile her cihazdan yönetin.
+    </div>
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <svg class="google-icon" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Google ile Giriş Yap
+    </button>
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-note">
+      Verileriniz yalnızca sizin Google hesabınıza bağlıdır.<br>
+      Telefon ve bilgisayarınızda eşzamanlı çalışır.
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SYNC INDICATOR ═══ -->
+<div class="sync-indicator" id="syncIndicator">
+  <div class="sync-dot"></div>
+  <span>Kaydediliyor…</span>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-inner">
+      <div class="logo">
+        <div class="logo-icon">👔</div>
+        <div>
+          <div class="logo-name">Beyefendi Nakitakışı</div>
+          <div class="logo-sub">Finansal Kontrol Paneli</div>
+        </div>
+      </div>
+
+      <!-- User Profile -->
+      <div class="user-profile" id="userProfile" onclick="toggleUserMenu()">
+        <img class="user-avatar" id="userAvatar" src="" style="display:none">
+        <div class="user-avatar-placeholder" id="userAvatarPlaceholder">👤</div>
+        <div class="user-info">
+          <div class="user-name" id="userName">Yükleniyor…</div>
+          <div class="user-email" id="userEmail"></div>
+        </div>
+        <div style="color:var(--muted);font-size:10px">▲</div>
+        <div class="user-menu" id="userMenu">
+          <div class="user-menu-item" onclick="event.stopPropagation();signOut()">
+            <span>🚪</span> Çıkış Yap
+          </div>
+        </div>
+      </div>
+
+      <span class="nav-section-label">Genel</span>
+      <div class="nav-item-plain active" id="nav-all" onclick="switchView('all')">
+        <span style="font-size:15px;width:18px;text-align:center">🌐</span>
+        <span style="flex:1">Tüm İşlemler</span>
+      </div>
+      <div class="nav-item-plain" id="nav-cashflow" onclick="switchView('cashflow')">
+        <span style="font-size:15px;width:18px;text-align:center">📊</span>
+        <span style="flex:1">Nakit Akışı Raporu</span>
+      </div>
+
+      <span class="nav-section-label">
+        Hesaplarım
+        <button onclick="openAccountModal()">＋</button>
+      </span>
+      <div id="accountNavList"></div>
+
+      <div style="height:10px;flex-shrink:0"></div>
+      <div class="sidebar-footer">
+        <strong id="footer-balance">₺0,00</strong>
+        Toplam net varlık
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></div>
+        <div>
+          <div class="topbar-title" id="page-title">Tüm İşlemler</div>
+          <div class="topbar-subtitle" id="page-subtitle">Tüm hesapların özeti</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" id="searchInput" placeholder="İşlem ara…" oninput="renderTransactions()">
+        </div>
+        <select class="month-select" id="monthFilter" onchange="updateAll()">
+          <option value="all">Tüm Zamanlar</option>
+          <option value="0">Ocak</option><option value="1">Şubat</option><option value="2">Mart</option>
+          <option value="3">Nisan</option><option value="4">Mayıs</option><option value="5">Haziran</option>
+          <option value="6">Temmuz</option><option value="7">Ağustos</option><option value="8">Eylül</option>
+          <option value="9">Ekim</option><option value="10">Kasım</option><option value="11">Aralık</option>
+        </select>
+        <button class="btn btn-green btn-sm" onclick="openTxModal('income')">＋ Gelir</button>
+        <button class="btn btn-red btn-sm" onclick="openTxModal('expense')">− Gider</button>
+        <button class="btn btn-blue btn-sm" onclick="openTxModal('transfer')">⇄ Transfer</button>
+      </div>
+    </div>
+    <div id="mainContent"></div>
+  </main>
+</div>
+
+<!-- TRANSACTION MODAL -->
+<div class="modal-overlay" id="txModalOverlay" onclick="closeTxModal(event)">
+  <div class="modal">
+    <div class="modal-title" id="txModalTitle">Yeni İşlem</div>
+    <div class="form-group">
+      <label class="form-label">Tür</label>
+      <div class="type-toggle">
+        <button class="type-btn income" id="typeIncome" onclick="setTxType('income')">📈 Gelir</button>
+        <button class="type-btn expense" id="typeExpense" onclick="setTxType('expense')">📉 Gider</button>
+        <button class="type-btn transfer" id="typeTransfer" onclick="setTxType('transfer')">⇄ Transfer</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" id="fromAccLabel">Ana Hesap</label>
+      <select class="form-input" id="txFromAccount" onchange="populateSubAccSelect('from')"></select>
+    </div>
+    <div class="form-group" id="fromSubGroup" style="display:none">
+      <label class="form-label">Alt Hesap (opsiyonel)</label>
+      <select class="form-input" id="txFromSub"></select>
+    </div>
+    <div class="form-group" id="toAccGroup" style="display:none">
+      <label class="form-label">Hedef Ana Hesap</label>
+      <select class="form-input" id="txToAccount" onchange="populateSubAccSelect('to')"></select>
+    </div>
+    <div class="form-group" id="toSubGroup" style="display:none">
+      <label class="form-label">Hedef Alt Hesap (opsiyonel)</label>
+      <select class="form-input" id="txToSub"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Açıklama</label>
+      <input class="form-input" id="txDesc" placeholder="Örn: Maaş, Market, Kira…">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tutar (₺)</label>
+      <input class="form-input" id="txAmount" type="number" min="0" step="0.01" placeholder="0,00">
+    </div>
+    <div class="form-group" id="txCatGroup">
+      <label class="form-label">Kategori</label>
+      <select class="form-input" id="txCat">
+        <option value="💼 İş">💼 İş</option><option value="🏠 Ev">🏠 Ev</option>
+        <option value="🛒 Market">🛒 Market</option><option value="🚗 Ulaşım">🚗 Ulaşım</option>
+        <option value="🍽️ Yemek">🍽️ Yemek</option><option value="🎮 Eğlence">🎮 Eğlence</option>
+        <option value="💊 Sağlık">💊 Sağlık</option><option value="📚 Eğitim">📚 Eğitim</option>
+        <option value="✈️ Seyahat">✈️ Seyahat</option><option value="👗 Giyim">👗 Giyim</option>
+        <option value="💡 Faturalar">💡 Faturalar</option><option value="📈 Yatırım">📈 Yatırım</option>
+        <option value="🥇 Altın">🥇 Altın</option><option value="💵 Döviz">💵 Döviz</option>
+        <option value="🎁 Diğer">🎁 Diğer</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tarih</label>
+      <input class="form-input" id="txDate" type="date">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeTxModal()">İptal</button>
+      <button class="btn btn-green" style="flex:2" id="txSaveBtn" onclick="saveTransaction()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ACCOUNT MODAL -->
+<div class="modal-overlay" id="accModalOverlay" onclick="closeAccModal(event)">
+  <div class="modal">
+    <div class="modal-title" id="accModalTitle">Yeni Hesap Ekle</div>
+    <div class="form-group"><label class="form-label">Hesap Adı</label><input class="form-input" id="accName" placeholder="Örn: Garanti Bankası…"></div>
+    <div class="form-group">
+      <label class="form-label">Tür</label>
+      <select class="form-input" id="accType">
+        <option value="Banka">🏦 Banka</option><option value="Cüzdan">👛 Cüzdan / Nakit</option>
+        <option value="Kredi Kartı">💳 Kredi Kartı</option><option value="Yatırım">📈 Yatırım Hesabı</option>
+        <option value="Tasarruf">🐖 Tasarruf</option><option value="Döviz">💵 Döviz Hesabı</option>
+        <option value="Altın">🥇 Altın Hesabı</option><option value="Diğer">📦 Diğer</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">İkon</label><div class="emoji-grid" id="emojiGrid"></div></div>
+    <div class="form-group"><label class="form-label">Renk</label><div class="color-grid" id="colorGrid"></div></div>
+    <div class="form-group"><label class="form-label">Başlangıç Bakiyesi (₺)</label><input class="form-input" id="accBalance" type="number" step="0.01" placeholder="0,00"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeAccModal()">İptal</button>
+      <button class="btn btn-gold" style="flex:2" onclick="saveAccount()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUB-ACCOUNT MODAL -->
+<div class="modal-overlay" id="subModalOverlay" onclick="closeSubModal(event)">
+  <div class="modal">
+    <div class="modal-title" id="subModalTitle">Alt Hesap Ekle</div>
+    <div class="form-group"><label class="form-label">Alt Hesap Adı</label><input class="form-input" id="subName" placeholder="Örn: TL 1, Dolar Birikimim…"></div>
+    <div class="form-group">
+      <label class="form-label">Katalog (Tür)</label>
+      <select class="form-input" id="subCatalog">
+        <option value="TL">🇹🇷 TL — Türk Lirası</option>
+        <option value="Altın">🥇 Altın (Gram / Cumhuriyet / Ata)</option>
+        <option value="Döviz">💵 Döviz (USD, EUR, GBP…)</option>
+        <option value="Kripto">₿ Kripto Para</option>
+        <option value="Bono/Tahvil">📜 Bono / Tahvil / Fon</option>
+        <option value="Diğer">📦 Diğer</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Açıklama / Not</label><input class="form-input" id="subNote" placeholder="Örn: USD birikimi, 22 ayar…"></div>
+    <div class="form-group"><label class="form-label">Başlangıç Bakiyesi (₺)</label><input class="form-input" id="subBalance" type="number" step="0.01" placeholder="0,00"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeSubModal()">İptal</button>
+      <button class="btn btn-blue" style="flex:2" onclick="saveSubAccount()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastIcon">✅</span><span id="toastMsg"></span></div>
+
+<!-- ═══ FIREBASE ═══ -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import {
+  getFirestore, doc, collection, onSnapshot,
+  setDoc, deleteDoc, writeBatch, getDocs, query
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBP7DZ22pmLYFja71ug9tedfFZleAukA5k",
+  authDomain: "beyefendi-nakit-akisi.firebaseapp.com",
+  projectId: "beyefendi-nakit-akisi",
+  storageBucket: "beyefendi-nakit-akisi.firebasestorage.app",
+  messagingSenderId: "664188763841",
+  appId: "1:664188763841:web:03443b71cd16434d49de40",
+  measurementId: "G-HC8X9FBPXK"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const auth  = getAuth(firebaseApp);
+const db    = getFirestore(firebaseApp);
+
+let currentUser = null;
+let unsubFns    = [];
+
+// ── EXPOSE TO WINDOW ──────────────────────────────────────────
+window.signInWithGoogle = async () => {
+  showAuthLoading('Google hesabınız açılıyor…');
+  try {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  } catch(e) {
+    hideAuthLoading();
+    showAuthError(e.code === 'auth/popup-closed-by-user'
+      ? 'Giriş penceresi kapatıldı. Tekrar deneyin.'
+      : 'Giriş başarısız: ' + e.message);
+  }
+};
+
+window.signOut = async () => {
+  if(!confirm('Çıkış yapmak istiyor musunuz?')) return;
+  unsubFns.forEach(fn => fn());
+  unsubFns = [];
+  await fbSignOut(auth);
+  location.reload();
+};
+
+// ── AUTH STATE ────────────────────────────────────────────────
+onAuthStateChanged(auth, user => {
+  if(user) {
+    currentUser = user;
+    onUserSignedIn(user);
+  } else {
+    hideAuthLoading();
+    document.getElementById('authScreen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+});
+
+function onUserSignedIn(user) {
+  // Update UI
+  document.getElementById('userName').textContent  = user.displayName || 'Kullanıcı';
+  document.getElementById('userEmail').textContent = user.email || '';
+  if(user.photoURL) {
+    document.getElementById('userAvatar').src = user.photoURL;
+    document.getElementById('userAvatar').style.display = 'block';
+    document.getElementById('userAvatarPlaceholder').style.display = 'none';
+  }
+
+  // Hide auth, show app
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  setTimeout(() => document.getElementById('app').classList.add('ready'), 50);
+
+  // Subscribe to Firestore
+  subscribeToData(user.uid);
+}
+
+// ── FIRESTORE PATHS ───────────────────────────────────────────
+const path = uid => ({
+  accounts:    () => collection(db, 'users', uid, 'accounts'),
+  subaccounts: () => collection(db, 'users', uid, 'subaccounts'),
+  txs:         () => collection(db, 'users', uid, 'transactions'),
+  account:  id => doc(db, 'users', uid, 'accounts', id),
+  subaccount:id=> doc(db, 'users', uid, 'subaccounts', id),
+  tx:       id => doc(db, 'users', uid, 'transactions', id),
+});
+
+// ── REALTIME SUBSCRIPTIONS ────────────────────────────────────
+function subscribeToData(uid) {
+  showAuthLoading('Verileriniz yükleniyor…');
+  let loaded = {a:false, s:false, t:false};
+  const check = () => { if(loaded.a && loaded.s && loaded.t){ hideAuthLoading(); updateAll(); } };
+  const p = path(uid);
+
+  unsubFns.push(onSnapshot(p.accounts(), snap => {
+    window._accounts = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    loaded.a = true; check(); renderSidebar();
+  }));
+  unsubFns.push(onSnapshot(p.subaccounts(), snap => {
+    window._subAccounts = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    loaded.s = true; check(); renderSidebar();
+  }));
+  unsubFns.push(onSnapshot(p.txs(), snap => {
+    window._transactions = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    loaded.t = true; check();
+  }));
+}
+
+// ── SAVE HELPERS ─────────────────────────────────────────────
+function showSync(){ const s=document.getElementById('syncIndicator');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),1800); }
+
+window._saveAccount = async (obj) => {
+  showSync();
+  const p = path(currentUser.uid);
+  await setDoc(p.account(obj.id), obj);
+};
+window._deleteAccount = async (id) => {
+  showSync();
+  const p = path(currentUser.uid);
+  // delete account doc
+  await deleteDoc(p.account(id));
+  // delete sub-accounts of this account
+  const subs = window._subAccounts.filter(s => s.parentId === id);
+  const batch = writeBatch(db);
+  subs.forEach(s => batch.delete(p.subaccount(s.id)));
+  // delete transactions of this account
+  const txsSnap = await getDocs(query(p.txs()));
+  txsSnap.docs.forEach(d => {
+    const t = d.data();
+    if(t.accountId===id||t.fromAccountId===id||t.toAccountId===id) batch.delete(p.tx(d.id));
+  });
+  await batch.commit();
+};
+window._saveSubAccount = async (obj) => {
+  showSync();
+  await setDoc(path(currentUser.uid).subaccount(obj.id), obj);
+};
+window._deleteSubAccount = async (id) => {
+  showSync();
+  const p = path(currentUser.uid);
+  await deleteDoc(p.subaccount(id));
+  const snap = await getDocs(p.txs());
+  const batch = writeBatch(db);
+  snap.docs.forEach(d => {
+    const t = d.data();
+    if(t.subAccountId===id||t.fromSubId===id||t.toSubId===id) batch.delete(p.tx(d.id));
+  });
+  await batch.commit();
+};
+window._saveTx = async (obj) => {
+  showSync();
+  await setDoc(path(currentUser.uid).tx(obj.id), obj);
+};
+window._deleteTx = async (id) => {
+  showSync();
+  await deleteDoc(path(currentUser.uid).tx(id));
+};
+
+// ── AUTH UI HELPERS ───────────────────────────────────────────
+function showAuthLoading(txt) {
+  document.getElementById('authLoading').style.display = 'flex';
+  document.getElementById('loadingText').textContent = txt;
+}
+function hideAuthLoading() {
+  document.getElementById('authLoading').style.display = 'none';
+}
+function showAuthError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg; el.style.display = 'block';
+}
+</script>
+
+<!-- ═══ APP LOGIC ═══ -->
+<script>
+// ── REACTIVE STATE (synced from Firestore via window._*) ───────
+window._accounts     = [];
+window._subAccounts  = [];
+window._transactions = [];
+
+function accounts()     { return window._accounts     || []; }
+function subAccounts()  { return window._subAccounts  || []; }
+function transactions() { return window._transactions || []; }
+
+let currentView   = 'all';
+let txFilter      = 'all';
+let currentTxType = 'income';
+let editingAccId  = null;
+let editingSubId  = null;
+let currentParentForSub = null;
+let selEmoji = '🏦';
+let selColor = '#00e5a0';
+let cfPeriod = 'monthly';
+
+const EMOJIS = ['🏦','👛','💳','💰','🐖','📈','🏠','🚗','💎','🎯','🌟','💡','🔑','📦','🏛️','🌿','🥇','💵','₿','📜'];
+const ACC_COLORS = ['#00e5a0','#5b8af5','#ff4d6d','#d4a843','#b24bff','#ff8c42','#00c9e0','#ff6bff','#4ade80','#38bdf8'];
+const CHART_COLORS = ['#00e5a0','#5b8af5','#f5c542','#ff4d6d','#b24bff','#ff8c42','#00c9e0','#ff6bff'];
+const CAT_MAP = {
+  'TL':{'cls':'cat-tl','label':'TL'},
+  'Altın':{'cls':'cat-altin','label':'ALTIN'},
+  'Döviz':{'cls':'cat-doviz','label':'DÖVİZ'},
+  'Kripto':{'cls':'cat-kripto','label':'KRİPTO'},
+  'Bono/Tahvil':{'cls':'cat-bono','label':'BONO'},
+  'Diğer':{'cls':'cat-diger','label':'DİĞER'},
+};
+
+function fmt(n){ return '₺'+Math.abs(n).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDate(d){ return new Date(d).toLocaleDateString('tr-TR',{day:'2-digit',month:'short',year:'2-digit'}); }
+function getAcc(id){ return accounts().find(a=>a.id===id); }
+function getSub(id){ return subAccounts().find(s=>s.id===id); }
+function getSubsOfAcc(accId){ return subAccounts().filter(s=>s.parentId===accId); }
+function uid(){ return 'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
+
+function accBalance(id){
+  const acc=getAcc(id); let b=acc?(acc.initialBalance||0):0;
+  getSubsOfAcc(id).forEach(s=>{ b+=s.initialBalance||0; });
+  transactions().forEach(t=>{
+    if(t.type==='transfer'){if(t.fromAccountId===id)b-=t.amount;if(t.toAccountId===id)b+=t.amount;}
+    else{if(t.accountId===id)b+=t.type==='income'?t.amount:-t.amount;}
+  });
+  return b;
+}
+function subBalance(sid){
+  const sub=getSub(sid); let b=sub?(sub.initialBalance||0):0;
+  transactions().forEach(t=>{
+    if(t.subAccountId===sid)b+=t.type==='income'?t.amount:-t.amount;
+    if(t.type==='transfer'){if(t.fromSubId===sid)b-=t.amount;if(t.toSubId===sid)b+=t.amount;}
+  });
+  return b;
+}
+function totalNet(){ return accounts().reduce((s,a)=>s+accBalance(a.id),0); }
+
+function getFilteredTx(){
+  const month=document.getElementById('monthFilter').value;
+  const search=(document.getElementById('searchInput').value||'').toLowerCase();
+  return transactions().filter(t=>{
+    if(currentView!=='all'&&currentView!=='cashflow'){
+      if(currentView.startsWith('id_')||currentView.startsWith('sub_')){
+        // check if it's a sub ID
+        const isSub=subAccounts().some(s=>s.id===currentView);
+        if(isSub){
+          if(t.type==='transfer'){if(t.fromSubId!==currentView&&t.toSubId!==currentView)return false;}
+          else{if(t.subAccountId!==currentView)return false;}
+        } else {
+          const mySubIds=getSubsOfAcc(currentView).map(s=>s.id);
+          if(t.type==='transfer'){const fm=t.fromAccountId===currentView||mySubIds.includes(t.fromSubId);const tm=t.toAccountId===currentView||mySubIds.includes(t.toSubId);if(!fm&&!tm)return false;}
+          else{if(t.accountId!==currentView&&!mySubIds.includes(t.subAccountId))return false;}
+        }
+      }
+    }
+    if(txFilter!=='all'&&t.type!==txFilter)return false;
+    if(month!=='all'&&new Date(t.date).getMonth()!==parseInt(month))return false;
+    if(search){if(!(t.desc||'').toLowerCase().includes(search)&&!(t.cat||'').toLowerCase().includes(search))return false;}
+    return true;
+  });
+}
+
+// ── SIDEBAR ──────────────────────────────────────────────────
+function renderSidebar(){
+  let html='';
+  accounts().forEach(a=>{
+    const subs=getSubsOfAcc(a.id);
+    const bal=accBalance(a.id);
+    const active=currentView===a.id?'active':'';
+    html+=`<div class="nav-account ${active}" id="nav-${a.id}" onclick="switchView('${a.id}')">
+      <div class="acc-dot" style="background:${a.color}"></div>
+      <span style="font-size:15px">${a.emoji}</span>
+      <span class="nav-lbl">${a.name}</span>
+      <span class="nav-badge">${fmt(bal)}</span>
+      <div class="nav-acts">
+        <button onclick="event.stopPropagation();openSubModal('${a.id}')" title="Alt hesap">＋</button>
+        <button onclick="event.stopPropagation();openAccountModal('${a.id}')" title="Düzenle">✏️</button>
+        <button onclick="event.stopPropagation();deleteAccount('${a.id}')" title="Sil">🗑</button>
+      </div>
+    </div>`;
+    subs.forEach(s=>{
+      const ci=CAT_MAP[s.catalog]||CAT_MAP['Diğer'];
+      const sb=subBalance(s.id);
+      const sa=currentView===s.id?'active':'';
+      html+=`<div class="nav-sub ${sa}" id="nav-${s.id}" onclick="switchView('${s.id}')">
+        <span class="sub-cat-badge ${ci.cls}">${ci.label}</span>
+        <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.name}</span>
+        <span style="font-size:9.5px;font-family:'DM Mono',monospace;color:var(--muted);flex-shrink:0">${fmt(sb)}</span>
+        <div class="nav-acts-s">
+          <button onclick="event.stopPropagation();openSubModal('${a.id}','${s.id}')" style="background:none;border:none;cursor:pointer;font-size:10px;padding:1px 3px;border-radius:3px;color:var(--muted)">✏️</button>
+          <button onclick="event.stopPropagation();deleteSubAccount('${s.id}')" style="background:none;border:none;cursor:pointer;font-size:10px;padding:1px 3px;border-radius:3px;color:var(--muted)">🗑</button>
+        </div>
+      </div>`;
+    });
+    html+=`<div class="nav-sub-add" onclick="openSubModal('${a.id}')">＋ Alt hesap ekle</div>`;
+  });
+  document.getElementById('accountNavList').innerHTML=html;
+  document.getElementById('footer-balance').textContent=fmt(totalNet());
+}
+
+// ── SWITCH VIEW ───────────────────────────────────────────────
+function switchView(id){
+  currentView=id; txFilter='all';
+  document.querySelectorAll('.nav-account,.nav-item-plain,.nav-sub').forEach(n=>n.classList.remove('active'));
+  const el=document.getElementById('nav-'+id);if(el)el.classList.add('active');
+  const isSub=id!=='all'&&id!=='cashflow'&&subAccounts().some(s=>s.id===id);
+  if(id==='all'){document.getElementById('page-title').textContent='Tüm İşlemler';document.getElementById('page-subtitle').textContent='Tüm hesapların özeti';}
+  else if(id==='cashflow'){document.getElementById('page-title').textContent='Nakit Akışı Raporu';document.getElementById('page-subtitle').textContent='Aylık & Haftalık detaylı analiz';}
+  else if(isSub){const s=getSub(id),p=getAcc(s?.parentId);document.getElementById('page-title').textContent=s?`${p?.emoji||''} ${p?.name||''} › ${s.name}`:'';document.getElementById('page-subtitle').textContent=s?`Alt Hesap — ${s.catalog}${s.note?' · '+s.note:''}`:''}
+  else{const a=getAcc(id);document.getElementById('page-title').textContent=a?`${a.emoji} ${a.name}`:'';document.getElementById('page-subtitle').textContent=a?a.type:'';}
+  if(window.innerWidth<=980)document.getElementById('sidebar').classList.remove('open');
+  updateAll();
+}
+
+// ── MAIN CONTENT ─────────────────────────────────────────────
+function renderMainContent(){
+  if(currentView==='cashflow'){document.getElementById('mainContent').innerHTML=`<div class="content" id="cfContent"></div>`;renderCashflow();return;}
+  const isSub=currentView!=='all'&&currentView!=='cashflow'&&subAccounts().some(s=>s.id===currentView);
+  document.getElementById('mainContent').innerHTML=`
+    <div class="content">
+      ${currentView==='all'?renderOverview():''}
+      ${(!isSub&&currentView!=='all')?renderSubAccountsSection(currentView):''}
+      <div class="stats-grid" id="statsGrid"></div>
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">İşlemler</div>
+            ${currentView!=='all'?`<button class="btn btn-ghost btn-sm" onclick="clearViewTx()">🗑 Temizle</button>`:''}
+          </div>
+          <div class="filter-row">
+            <button class="filter-btn ${txFilter==='all'?'active':''}" onclick="setTxFilter('all',this)">Tümü</button>
+            <button class="filter-btn ${txFilter==='income'?'active':''}" onclick="setTxFilter('income',this)">Gelirler</button>
+            <button class="filter-btn ${txFilter==='expense'?'active':''}" onclick="setTxFilter('expense',this)">Giderler</button>
+            <button class="filter-btn ${txFilter==='transfer'?'active':''}" onclick="setTxFilter('transfer',this)">Transferler</button>
+          </div>
+          <div class="tx-list" id="txList"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Gider Dağılımı</div></div>
+            <div class="chart-wrap">
+              <div class="donut-container">
+                <svg class="donut-svg" width="150" height="150" id="donutSvg" viewBox="0 0 150 150"></svg>
+                <div class="donut-center"><div class="donut-center-val" id="donutCenter">₺0</div><div class="donut-center-lbl">GİDER</div></div>
+              </div>
+              <div class="legend" id="donutLegend"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Aylık Karşılaştırma</div></div>
+            <div class="bar-chart" id="barChart"></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderSubAccountsSection(accId){
+  const subs=getSubsOfAcc(accId);
+  if(!subs.length)return`<div style="background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;color:var(--muted)">Henüz alt hesap yok</span><button class="btn btn-blue btn-sm" onclick="openSubModal('${accId}')">＋ Alt Hesap Ekle</button></div>`;
+  return`<div class="sub-accounts-section"><div class="sub-accounts-header"><div class="sub-accounts-title">Alt Hesaplar</div><button class="btn btn-blue btn-sm" onclick="openSubModal('${accId}')">＋ Yeni Alt Hesap</button></div><div class="sub-acc-grid">${subs.map(s=>{const ci=CAT_MAP[s.catalog]||CAT_MAP['Diğer'],bal=subBalance(s.id);return`<div class="sub-acc-card${currentView===s.id?' active-sub':''}" onclick="switchView('${s.id}')"><div class="sac-acts"><button onclick="event.stopPropagation();openSubModal('${accId}','${s.id}')">✏️</button><button onclick="event.stopPropagation();deleteSubAccount('${s.id}')">🗑</button></div><div class="sac-top"><span class="sac-catalog ${ci.cls}">${ci.label}</span></div><div class="sac-name">${s.name}</div>${s.note?`<div style="font-size:10px;color:var(--muted);margin-bottom:4px;font-family:'DM Mono',monospace">${s.note}</div>`:''}<div class="sac-balance" style="color:${bal>=0?'var(--g)':'var(--r)'}">${fmt(bal)}</div><div style="font-size:9.5px;color:var(--muted);margin-top:3px;font-family:'DM Mono',monospace">${transactions().filter(t=>t.subAccountId===s.id||t.fromSubId===s.id||t.toSubId===s.id).length} işlem</div></div>`;}).join('')}</div></div>`;
+}
+
+function renderOverview(){
+  if(!accounts().length)return`<div style="text-align:center;padding:60px 20px;color:var(--muted)"><div style="font-size:46px;margin-bottom:14px">👔</div><div style="font-size:17px;font-weight:700;margin-bottom:7px;color:var(--text)">Beyefendi, henüz hesap eklenmemiş</div><div style="font-size:12px;margin-bottom:18px">Soldaki ＋ butonuyla hesap ekleyin</div><button class="btn btn-gold" onclick="openAccountModal()">＋ İlk Hesabı Ekle</button></div>`;
+  const tI=transactions().filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const tE=transactions().filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  return`<div class="acc-overview-grid">${accounts().map(a=>{const bal=accBalance(a.id),subs=getSubsOfAcc(a.id);return`<div class="account-card" onclick="switchView('${a.id}')"><div class="ac-bar" style="background:${a.color}"></div><div class="ac-top"><span class="ac-emoji">${a.emoji}</span><div class="ac-actions"><button onclick="event.stopPropagation();openAccountModal('${a.id}')">✏️</button><button onclick="event.stopPropagation();deleteAccount('${a.id}')">🗑</button></div></div><div class="ac-name">${a.name}</div><div class="ac-type" style="color:${a.color}">${a.type}</div><div class="ac-balance" style="color:${bal>=0?'var(--g)':'var(--r)'}">${fmt(bal)}</div><div class="ac-sub">${transactions().filter(t=>t.accountId===a.id||t.fromAccountId===a.id||t.toAccountId===a.id).length} işlem</div>${subs.length?`<div class="sub-chips">${subs.map(s=>{const ci=CAT_MAP[s.catalog]||CAT_MAP['Diğer'];return`<span class="sub-chip ${ci.cls}" onclick="event.stopPropagation();switchView('${s.id}')">${ci.label} ${s.name}</span>`;}).join('')}</div>`:''}</div>`;}).join('')}<div class="add-account-card" onclick="openAccountModal()"><div style="font-size:24px">＋</div><div style="font-size:12px;font-weight:700">Hesap Ekle</div></div></div><div class="total-summary"><div><div class="ts-label">Toplam Varlık</div><div class="ts-val" style="color:var(--gold)">${fmt(totalNet())}</div></div><div><div class="ts-label">Toplam Gelir</div><div class="ts-val" style="color:var(--g)">${fmt(tI)}</div></div><div><div class="ts-label">Toplam Gider</div><div class="ts-val" style="color:var(--r)">${fmt(tE)}</div></div><div><div class="ts-label">Net</div><div class="ts-val" style="color:${tI-tE>=0?'var(--g)':'var(--r)'}">${tI-tE>=0?'▲ Kârlı':'▼ Zararda'}</div></div><div><div class="ts-label">Hesap</div><div class="ts-val" style="color:var(--text)">${accounts().length}</div></div><div><div class="ts-label">Alt Hesap</div><div class="ts-val" style="color:var(--b)">${subAccounts().length}</div></div></div>`;
+}
+
+// ── STATS ────────────────────────────────────────────────────
+function updateStats(){
+  const sg=document.getElementById('statsGrid');if(!sg)return;
+  const month=document.getElementById('monthFilter').value;
+  const isSub=currentView!=='all'&&currentView!=='cashflow'&&subAccounts().some(s=>s.id===currentView);
+  let pool=transactions();
+  if(currentView!=='all'&&currentView!=='cashflow'){
+    if(isSub) pool=pool.filter(t=>t.subAccountId===currentView||(t.type==='transfer'&&(t.fromSubId===currentView||t.toSubId===currentView)));
+    else{const sids=getSubsOfAcc(currentView).map(s=>s.id);pool=pool.filter(t=>t.accountId===currentView||sids.includes(t.subAccountId)||(t.type==='transfer'&&(t.fromAccountId===currentView||t.toAccountId===currentView||sids.includes(t.fromSubId)||sids.includes(t.toSubId))));}
+  }
+  if(month!=='all')pool=pool.filter(t=>new Date(t.date).getMonth()===parseInt(month));
+  const inc=pool.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+  const exp=pool.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+  const net=inc-exp;
+  sg.innerHTML=`<div class="stat-card green"><span class="stat-icon">💚</span><div class="stat-label">Gelir</div><div class="stat-value">${fmt(inc)}</div><div class="stat-sub">${pool.filter(t=>t.type==='income').length} işlem</div></div><div class="stat-card red"><span class="stat-icon">🔴</span><div class="stat-label">Gider</div><div class="stat-value">${fmt(exp)}</div><div class="stat-sub">${pool.filter(t=>t.type==='expense').length} işlem</div></div><div class="stat-card ${net>=0?'blue':'red'}"><span class="stat-icon">💎</span><div class="stat-label">Net</div><div class="stat-value" style="color:${net>=0?'var(--b)':'var(--r)'}">${(net>=0?'+':'-')}${fmt(net)}</div><div class="stat-sub">${net>=0?'▲ Kârlı':'▼ Zararda'}</div></div>`;
+}
+
+// ── TX LIST ───────────────────────────────────────────────────
+function renderTransactions(){
+  const list=document.getElementById('txList');if(!list)return;
+  const filtered=getFilteredTx().slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(!filtered.length){list.innerHTML=`<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">Henüz işlem yok</div></div>`;return;}
+  list.innerHTML=filtered.map(t=>{
+    if(t.type==='transfer'){
+      const fa=getAcc(t.fromAccountId),ta=getAcc(t.toAccountId);
+      const fs=getSub(t.fromSubId),ts2=getSub(t.toSubId);
+      const fL=fs?`${fa?.emoji||''} ${fa?.name||'?'} › ${fs.name}`:`${fa?.emoji||''} ${fa?.name||'?'}`;
+      const tL=ts2?`${ta?.emoji||''} ${ta?.name||'?'} › ${ts2.name}`:`${ta?.emoji||''} ${ta?.name||'?'}`;
+      return`<div class="tx-item" onclick="deleteTx('${t.id}')"><div class="tx-icon" style="background:rgba(91,138,245,.12)">⇄</div><div class="tx-info"><div class="tx-name">${t.desc||'Transfer'}</div><div class="tx-meta"><span style="color:var(--b)">${fL} → ${tL}</span></div></div><div class="tx-date">${fmtDate(t.date)}</div><div class="tx-amount transfer">⇄ ${fmt(t.amount)}</div></div>`;
+    }
+    const acc=getAcc(t.accountId),sub=getSub(t.subAccountId);
+    const bg=t.type==='income'?'rgba(0,229,160,.12)':'rgba(255,77,109,.12)';
+    const em=(t.cat||'🎁').split(' ')[0];
+    const showBadge=currentView==='all'||currentView==='cashflow';
+    return`<div class="tx-item" onclick="deleteTx('${t.id}')"><div class="tx-icon" style="background:${bg}">${em}</div><div class="tx-info"><div class="tx-name">${t.desc}</div><div class="tx-meta"><span class="tx-cat-chip">${t.cat}</span>${showBadge&&acc?`<span class="tx-acc-chip" style="border-color:${acc.color}40;color:${acc.color}">${acc.emoji} ${acc.name}${sub?' › '+sub.name:''}</span>`:''}${!showBadge&&sub?`<span style="color:var(--b);font-size:9.5px">└ ${sub.name}</span>`:''}</div></div><div class="tx-date">${fmtDate(t.date)}</div><div class="tx-amount ${t.type}">${t.type==='income'?'+':'-'}${fmt(t.amount)}</div></div>`;
+  }).join('');
+}
+
+// ── DONUT ────────────────────────────────────────────────────
+function renderDonut(){
+  const svg=document.getElementById('donutSvg'),legend=document.getElementById('donutLegend'),center=document.getElementById('donutCenter');
+  if(!svg)return;
+  const month=document.getElementById('monthFilter').value;
+  const isSub=currentView!=='all'&&currentView!=='cashflow'&&subAccounts().some(s=>s.id===currentView);
+  let pool=transactions().filter(t=>t.type==='expense');
+  if(currentView!=='all'&&currentView!=='cashflow'){if(isSub)pool=pool.filter(t=>t.subAccountId===currentView);else pool=pool.filter(t=>t.accountId===currentView||getSubsOfAcc(currentView).map(s=>s.id).includes(t.subAccountId));}
+  if(month!=='all')pool=pool.filter(t=>new Date(t.date).getMonth()===parseInt(month));
+  const totals={};pool.forEach(t=>{totals[t.cat]=(totals[t.cat]||0)+t.amount;});
+  const entries=Object.entries(totals).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const total=entries.reduce((s,[,v])=>s+v,0);
+  center.textContent=fmt(total);
+  if(!entries.length){svg.innerHTML=`<circle cx="75" cy="75" r="54" fill="none" stroke="var(--surface2)" stroke-width="18"/>`;legend.innerHTML=`<div style="color:var(--muted);font-size:11px;text-align:center;width:100%">Gider yok</div>`;return;}
+  const r=54,cx=75,cy=75,circ=2*Math.PI*r;
+  let offset=0,s='',l='';
+  entries.forEach(([cat,val],i)=>{
+    const pct=val/total,dash=pct*circ;
+    s+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${CHART_COLORS[i]}" stroke-width="18" stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${-offset}" style="transition:all .5s"/>`;
+    offset+=dash;
+    const em=cat.split(' ')[0];
+    l+=`<div class="legend-item"><div class="legend-dot" style="background:${CHART_COLORS[i]}"></div><div class="legend-name">${em} ${cat.split(' ').slice(1).join(' ')}</div><div class="legend-pct">${(pct*100).toFixed(0)}%</div><div class="legend-val">${fmt(val)}</div></div>`;
+  });
+  svg.innerHTML=s;legend.innerHTML=l;
+}
+
+// ── BAR ──────────────────────────────────────────────────────
+function renderBar(){
+  const bc=document.getElementById('barChart');if(!bc)return;
+  const months=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+  const now=new Date();const recent=[];
+  const isSub=currentView!=='all'&&currentView!=='cashflow'&&subAccounts().some(s=>s.id===currentView);
+  for(let i=5;i>=0;i--){
+    const m=(now.getMonth()-i+12)%12,y=now.getFullYear()-(now.getMonth()<i?1:0);
+    let pool=transactions();
+    if(currentView!=='all'&&currentView!=='cashflow'){
+      if(isSub)pool=pool.filter(t=>t.subAccountId===currentView||(t.type==='transfer'&&(t.fromSubId===currentView||t.toSubId===currentView)));
+      else{const sids=getSubsOfAcc(currentView).map(s=>s.id);pool=pool.filter(t=>t.accountId===currentView||sids.includes(t.subAccountId)||(t.type==='transfer'&&(t.fromAccountId===currentView||t.toAccountId===currentView)));}
+    }
+    pool=pool.filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y;});
+    recent.push({label:months[m],inc:pool.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),exp:pool.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)});
+  }
+  const max=Math.max(...recent.map(r=>Math.max(r.inc,r.exp)),1);
+  bc.innerHTML=recent.map(r=>`<div style="margin-bottom:10px"><div style="font-size:9px;color:var(--muted);margin-bottom:4px;font-family:'DM Mono',monospace">${r.label}</div><div class="bar-row"><span class="bar-lbl" style="color:var(--g)">G+</span><div class="bar-track"><div class="bar-fill" style="width:${(r.inc/max*100).toFixed(1)}%;background:var(--g)"></div></div><span class="bar-amt">${r.inc>0?fmt(r.inc):'—'}</span></div><div class="bar-row"><span class="bar-lbl" style="color:var(--r)">G-</span><div class="bar-track"><div class="bar-fill" style="width:${(r.exp/max*100).toFixed(1)}%;background:var(--r)"></div></div><span class="bar-amt">${r.exp>0?fmt(r.exp):'—'}</span></div></div>`).join('');
+}
+
+// ── CASHFLOW ─────────────────────────────────────────────────
+function renderCashflow(){
+  const c=document.getElementById('cfContent');if(!c)return;
+  c.innerHTML=`<div class="cf-section"><div class="cf-title">📊 Nakit Akışı Raporu</div><div class="cf-period-tabs"><button class="cf-tab ${cfPeriod==='monthly'?'active':''}" onclick="setCfPeriod('monthly')">Aylık Görünüm</button><button class="cf-tab ${cfPeriod==='weekly'?'active':''}" onclick="setCfPeriod('weekly')">Haftalık Görünüm</button></div><div id="cfBody"></div></div>`;
+  renderCfBody();
+}
+function setCfPeriod(p){cfPeriod=p;renderCashflow();}
+function renderCfBody(){const b=document.getElementById('cfBody');if(!b)return;cfPeriod==='monthly'?renderCfMonthly(b):renderCfWeekly(b);}
+
+function renderCfMonthly(container){
+  const months=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  const shortM=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+  const now=new Date();const data=[];
+  for(let i=11;i>=0;i--){
+    const m=(now.getMonth()-i+12)%12,y=now.getFullYear()-(now.getMonth()<i?1:0);
+    const pool=transactions().filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y;});
+    const inc=pool.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+    const exp=pool.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    data.push({label:shortM[m],fullLabel:months[m],year:y,inc,exp,net:inc-exp,count:pool.length});
+  }
+  const maxVal=Math.max(...data.map(d=>Math.max(d.inc,d.exp)),1);
+  const tI=data.reduce((s,d)=>s+d.inc,0),tE=data.reduce((s,d)=>s+d.exp,0),tN=tI-tE;
+  const best=data.reduce((a,b)=>b.net>a.net?b:a,data[0]);
+  const wexp=data.reduce((a,b)=>b.exp>a.exp?b:a,data[0]);
+  const insights=[
+    tN>0?`Son 12 ayda toplam <strong>${fmt(tN)}</strong> net kâr elde ettiniz.`:`Son 12 ayda toplam <strong>${fmt(Math.abs(tN))}</strong> net zarar yaşandı.`,
+    `En kârlı ay: <strong>${best.fullLabel} ${best.year}</strong> — Net ${fmt(best.net)}.`,
+    `En yüksek gider ayı: <strong>${wexp.fullLabel} ${wexp.year}</strong> (${fmt(wexp.exp)}).`,
+    `Aylık ortalama gelir <strong>${fmt(tI/12)}</strong>, ortalama gider <strong>${fmt(tE/12)}</strong>.`,
+  ];
+  container.innerHTML=`
+    <div class="cf-sum-grid">
+      <div class="cf-sum-card cf-inc"><div class="cf-sum-lbl">12 Ay Gelir</div><div class="cf-sum-val" style="color:var(--g)">${fmt(tI)}</div></div>
+      <div class="cf-sum-card cf-exp"><div class="cf-sum-lbl">12 Ay Gider</div><div class="cf-sum-val" style="color:var(--r)">${fmt(tE)}</div></div>
+      <div class="cf-sum-card cf-net"><div class="cf-sum-lbl">Net Akış</div><div class="cf-sum-val" style="color:${tN>=0?'var(--b)':'var(--r)'}">${tN>=0?'+':''}${fmt(tN)}</div></div>
+      <div class="cf-sum-card cf-gold"><div class="cf-sum-lbl">Aylık Ort.</div><div class="cf-sum-val" style="color:var(--gold)">${fmt(tI/12)}</div></div>
+    </div>
+    <div class="cf-insight"><div class="cf-insight-title">💡 Akıllı Analizler</div>${insights.map(i=>`<p>${i}</p>`).join('')}</div>
+    <div class="cf-chart-wrap">
+      <div class="cf-chart-title">Aylık Gelir / Gider (Son 12 Ay)</div>
+      <div class="cf-bars">${data.map(d=>`<div class="cf-bar-col" title="${d.fullLabel}: Gelir ${fmt(d.inc)}, Gider ${fmt(d.exp)}"><div class="cf-bar-income" style="height:${Math.max((d.inc/maxVal)*100,0)}%"></div><div class="cf-bar-expense" style="height:${Math.max((d.exp/maxVal)*100,0)}%"></div><div class="cf-bar-lbl">${d.label}</div></div>`).join('')}</div>
+      <div class="cf-chart-bottom"></div>
+      <div style="display:flex;gap:16px;margin-top:12px;font-size:11px"><span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(0,229,160,.5);display:inline-block"></span>Gelir</span><span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:rgba(255,77,109,.6);display:inline-block"></span>Gider</span></div>
+    </div>
+    <div class="card" style="margin-top:16px"><div class="card-header"><div class="card-title">Aylık Detay Tablosu</div></div><div style="overflow-x:auto"><table class="cf-table"><thead><tr><th>Ay</th><th>Gelir</th><th>Gider</th><th>Net</th><th>İşlem</th></tr></thead><tbody>${data.slice().reverse().map(d=>`<tr><td style="color:var(--text);font-family:'Syne',sans-serif;font-weight:600">${d.fullLabel} ${d.year}</td><td style="color:var(--g)">${d.inc>0?fmt(d.inc):'—'}</td><td style="color:var(--r)">${d.exp>0?fmt(d.exp):'—'}</td><td style="color:${d.net>=0?'var(--b)':'var(--r)'};font-weight:700">${d.net!==0?(d.net>0?'+':'')+fmt(d.net):'—'}</td><td style="color:var(--muted)">${d.count}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function renderCfWeekly(container){
+  const now=new Date();const weeks=[];
+  for(let w=11;w>=0;w--){
+    const end=new Date(now);end.setDate(now.getDate()-w*7);
+    const start=new Date(end);start.setDate(end.getDate()-6);
+    const pool=transactions().filter(t=>{const d=new Date(t.date);return d>=start&&d<=end;});
+    const inc=pool.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+    const exp=pool.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    weeks.push({label:`${start.toLocaleDateString('tr-TR',{day:'2-digit',month:'short'})}–${end.toLocaleDateString('tr-TR',{day:'2-digit',month:'short'})}`,inc,exp,net:inc-exp,count:pool.length});
+  }
+  const maxVal=Math.max(...weeks.map(d=>Math.max(d.inc,d.exp)),1);
+  const tI=weeks.reduce((s,d)=>s+d.inc,0),tE=weeks.reduce((s,d)=>s+d.exp,0),tN=tI-tE;
+  const busiest=weeks.reduce((a,b)=>b.count>a.count?b:a,weeks[0]);
+  const bestW=weeks.reduce((a,b)=>b.net>a.net?b:a,weeks[0]);
+  const wexpW=weeks.reduce((a,b)=>b.exp>a.exp?b:a,weeks[0]);
+  const insights=[
+    `Son 12 haftalık net akış: <strong>${tN>=0?'+':''}${fmt(tN)}</strong>.`,
+    `En hareketli hafta: <strong>${busiest.label}</strong> (${busiest.count} işlem).`,
+    `En kârlı hafta: <strong>${bestW.label}</strong> (Net ${fmt(bestW.net)}).`,
+    `En yüksek harcama: <strong>${wexpW.label}</strong> (${fmt(wexpW.exp)}).`,
+  ];
+  container.innerHTML=`
+    <div class="cf-sum-grid">
+      <div class="cf-sum-card cf-inc"><div class="cf-sum-lbl">12 Hafta Gelir</div><div class="cf-sum-val" style="color:var(--g)">${fmt(tI)}</div></div>
+      <div class="cf-sum-card cf-exp"><div class="cf-sum-lbl">12 Hafta Gider</div><div class="cf-sum-val" style="color:var(--r)">${fmt(tE)}</div></div>
+      <div class="cf-sum-card cf-net"><div class="cf-sum-lbl">Net Akış</div><div class="cf-sum-val" style="color:${tN>=0?'var(--b)':'var(--r)'}">${tN>=0?'+':''}${fmt(tN)}</div></div>
+      <div class="cf-sum-card cf-gold"><div class="cf-sum-lbl">Haftalık Ort.</div><div class="cf-sum-val" style="color:var(--gold)">${fmt(tN/12)}</div></div>
+    </div>
+    <div class="cf-insight"><div class="cf-insight-title">💡 Haftalık Analizler</div>${insights.map(i=>`<p>${i}</p>`).join('')}</div>
+    <div class="cf-chart-wrap">
+      <div class="cf-chart-title">Haftalık Gelir / Gider (Son 12 Hafta)</div>
+      <div class="cf-bars">${weeks.map(d=>`<div class="cf-bar-col" title="${d.label}: Gelir ${fmt(d.inc)}, Gider ${fmt(d.exp)}"><div class="cf-bar-income" style="height:${Math.max((d.inc/maxVal)*100,0)}%"></div><div class="cf-bar-expense" style="height:${Math.max((d.exp/maxVal)*100,0)}%"></div></div>`).join('')}</div>
+      <div class="cf-chart-bottom"></div>
+    </div>
+    <div class="card" style="margin-top:16px"><div class="card-header"><div class="card-title">Haftalık Detay Tablosu</div></div><div style="overflow-x:auto"><table class="cf-table"><thead><tr><th>Hafta</th><th>Gelir</th><th>Gider</th><th>Net</th><th>İşlem</th></tr></thead><tbody>${weeks.slice().reverse().map(d=>`<tr><td style="color:var(--text);font-family:'Syne',sans-serif;font-size:11px">${d.label}</td><td style="color:var(--g)">${d.inc>0?fmt(d.inc):'—'}</td><td style="color:var(--r)">${d.exp>0?fmt(d.exp):'—'}</td><td style="color:${d.net>=0?'var(--b)':'var(--r)'};font-weight:700">${d.net!==0?(d.net>0?'+':'')+fmt(d.net):'—'}</td><td style="color:var(--muted)">${d.count}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+// ── UPDATE ALL ────────────────────────────────────────────────
+function updateAll(){
+  renderSidebar();renderMainContent();
+  if(currentView!=='cashflow'){updateStats();renderTransactions();renderDonut();renderBar();}
+}
+
+// ── TX MODAL ─────────────────────────────────────────────────
+function populateAccSelects(){
+  const opts=accounts().map(a=>`<option value="${a.id}">${a.emoji} ${a.name}</option>`).join('');
+  document.getElementById('txFromAccount').innerHTML=opts||'<option value="">Hesap yok</option>';
+  document.getElementById('txToAccount').innerHTML=opts||'<option value="">Hesap yok</option>';
+  const isSub=currentView!=='all'&&currentView!=='cashflow'&&subAccounts().some(s=>s.id===currentView);
+  if(!isSub&&currentView!=='all'&&currentView!=='cashflow')document.getElementById('txFromAccount').value=currentView;
+  populateSubAccSelect('from');populateSubAccSelect('to');
+}
+function populateSubAccSelect(dir){
+  const accEl=document.getElementById(dir==='from'?'txFromAccount':'txToAccount');
+  const subEl=document.getElementById(dir==='from'?'txFromSub':'txToSub');
+  const grp=document.getElementById(dir==='from'?'fromSubGroup':'toSubGroup');
+  const subs=getSubsOfAcc(accEl.value);
+  if(subs.length){
+    subEl.innerHTML=`<option value="">— Ana hesap (alt hesap seçme) —</option>`+subs.map(s=>{const ci=CAT_MAP[s.catalog]||CAT_MAP['Diğer'];return`<option value="${s.id}">[${ci.label}] ${s.name}</option>`;}).join('');
+    grp.style.display='';
+    const isSub=currentView!=='all'&&currentView!=='cashflow'&&subAccounts().some(s=>s.id===currentView);
+    if(isSub&&dir==='from')subEl.value=currentView;
+  } else grp.style.display='none';
+}
+function openTxModal(type){
+  if(!accounts().length){showToast('⚠️','Önce hesap ekleyin!');openAccountModal();return;}
+  currentTxType=type;
+  document.getElementById('txModalOverlay').classList.add('open');
+  document.getElementById('txDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('txDesc').value='';document.getElementById('txAmount').value='';
+  populateAccSelects();setTxType(type);
+  setTimeout(()=>document.getElementById('txDesc').focus(),100);
+}
+function closeTxModal(e){if(!e||e.target===document.getElementById('txModalOverlay'))document.getElementById('txModalOverlay').classList.remove('open');}
+function setTxType(t){
+  currentTxType=t;
+  ['income','expense','transfer'].forEach(tp=>{document.getElementById('type'+tp[0].toUpperCase()+tp.slice(1)).classList.toggle('active',tp===t);});
+  const isT=t==='transfer';
+  document.getElementById('toAccGroup').style.display=isT?'':'none';
+  document.getElementById('toSubGroup').style.display=isT?'':'none';
+  document.getElementById('txCatGroup').style.display=isT?'none':'';
+  document.getElementById('fromAccLabel').textContent=isT?'Kaynak Hesap':'Ana Hesap';
+  document.getElementById('txModalTitle').textContent={income:'Gelir Ekle',expense:'Gider Ekle',transfer:'Hesaplar Arası Transfer'}[t];
+  const sb=document.getElementById('txSaveBtn');
+  sb.style.background={income:'var(--g)',expense:'var(--r)',transfer:'var(--b)'}[t];
+  sb.style.color={income:'#0a0f0d',expense:'#fff',transfer:'#fff'}[t];
+  if(isT)populateSubAccSelect('to');
+}
+async function saveTransaction(){
+  const desc=document.getElementById('txDesc').value.trim();
+  const amount=parseFloat(document.getElementById('txAmount').value);
+  const date=document.getElementById('txDate').value;
+  const fromId=document.getElementById('txFromAccount').value;
+  const fromSubId=document.getElementById('txFromSub').value||null;
+  if(!amount||amount<=0){showToast('⚠️','Geçerli tutar giriniz!');return;}
+  if(!date){showToast('⚠️','Tarih seçiniz!');return;}
+  if(!fromId){showToast('⚠️','Hesap seçiniz!');return;}
+  let obj;
+  if(currentTxType==='transfer'){
+    const toId=document.getElementById('txToAccount').value;
+    const toSubId=document.getElementById('txToSub').value||null;
+    if(toId===fromId&&fromSubId===toSubId){showToast('⚠️','Kaynak ve hedef aynı olamaz!');return;}
+    obj={id:uid(),type:'transfer',fromAccountId:fromId,fromSubId,toAccountId:toId,toSubId,desc:desc||'Transfer',amount,date};
+  } else {
+    if(!desc){showToast('⚠️','Açıklama giriniz!');return;}
+    const cat=document.getElementById('txCat').value;
+    obj={id:uid(),type:currentTxType,accountId:fromId,subAccountId:fromSubId,desc,amount,cat,date};
+  }
+  await window._saveTx(obj);
+  closeTxModal();
+  showToast({income:'✅',expense:'✅',transfer:'⇄'}[currentTxType],{income:'Gelir kaydedildi!',expense:'Gider kaydedildi!',transfer:'Transfer gerçekleştirildi!'}[currentTxType]);
+}
+
+// ── ACCOUNT MODAL ─────────────────────────────────────────────
+function buildEmojiGrid(){document.getElementById('emojiGrid').innerHTML=EMOJIS.map(e=>`<button class="emoji-btn${e===selEmoji?' selected':''}" onclick="pickEmoji('${e}')">${e}</button>`).join('');}
+function buildColorGrid(){document.getElementById('colorGrid').innerHTML=ACC_COLORS.map(c=>`<div class="color-swatch${c===selColor?' selected':''}" style="background:${c}" onclick="pickColor('${c}')"></div>`).join('');}
+function pickEmoji(e){selEmoji=e;buildEmojiGrid();}
+function pickColor(c){selColor=c;buildColorGrid();}
+function openAccountModal(id){
+  editingAccId=id||null;selEmoji='🏦';selColor=ACC_COLORS[0];
+  if(id){const a=getAcc(id);if(a){selEmoji=a.emoji;selColor=a.color;document.getElementById('accName').value=a.name;document.getElementById('accType').value=a.type;document.getElementById('accBalance').value=a.initialBalance||0;document.getElementById('accModalTitle').textContent='Hesabı Düzenle';}}
+  else{document.getElementById('accName').value='';document.getElementById('accType').value='Banka';document.getElementById('accBalance').value='';document.getElementById('accModalTitle').textContent='Yeni Hesap Ekle';}
+  buildEmojiGrid();buildColorGrid();
+  document.getElementById('accModalOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('accName').focus(),100);
+}
+function closeAccModal(e){if(!e||e.target===document.getElementById('accModalOverlay'))document.getElementById('accModalOverlay').classList.remove('open');}
+async function saveAccount(){
+  const name=document.getElementById('accName').value.trim();
+  const type=document.getElementById('accType').value;
+  const ib=parseFloat(document.getElementById('accBalance').value)||0;
+  if(!name){showToast('⚠️','Hesap adı giriniz!');return;}
+  const obj={id:editingAccId||uid(),name,type,emoji:selEmoji,color:selColor,initialBalance:ib};
+  await window._saveAccount(obj);
+  closeAccModal();
+  showToast('✅',editingAccId?'Hesap güncellendi!':`"${name}" eklendi!`);
+}
+async function deleteAccount(id){
+  const a=getAcc(id);if(!a)return;
+  const scnt=getSubsOfAcc(id).length;
+  const tcnt=transactions().filter(t=>t.accountId===id||t.fromAccountId===id||t.toAccountId===id).length;
+  if(!confirm(`"${a.name}" hesabını${scnt?', '+scnt+' alt hesabı':''} ve işlemlerini silmek istiyor musunuz?`))return;
+  await window._deleteAccount(id);
+  if(currentView===id||getSubsOfAcc(id).some(s=>s.id===currentView))currentView='all';
+  showToast('🗑️','Hesap silindi.');
+}
+
+// ── SUB-ACCOUNT MODAL ─────────────────────────────────────────
+function openSubModal(parentId,subId){
+  currentParentForSub=parentId;editingSubId=subId||null;
+  if(subId){const s=getSub(subId);if(s){document.getElementById('subName').value=s.name;document.getElementById('subCatalog').value=s.catalog;document.getElementById('subNote').value=s.note||'';document.getElementById('subBalance').value=s.initialBalance||0;document.getElementById('subModalTitle').textContent='Alt Hesabı Düzenle';}}
+  else{const a=getAcc(parentId);document.getElementById('subName').value='';document.getElementById('subCatalog').value='TL';document.getElementById('subNote').value='';document.getElementById('subBalance').value='';document.getElementById('subModalTitle').textContent=`Alt Hesap Ekle — ${a?.name||''}`;}
+  document.getElementById('subModalOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('subName').focus(),100);
+}
+function closeSubModal(e){if(!e||e.target===document.getElementById('subModalOverlay'))document.getElementById('subModalOverlay').classList.remove('open');}
+async function saveSubAccount(){
+  const name=document.getElementById('subName').value.trim();
+  const catalog=document.getElementById('subCatalog').value;
+  const note=document.getElementById('subNote').value.trim();
+  const ib=parseFloat(document.getElementById('subBalance').value)||0;
+  if(!name){showToast('⚠️','Alt hesap adı giriniz!');return;}
+  const obj={id:editingSubId||uid(),parentId:currentParentForSub,name,catalog,note,initialBalance:ib};
+  await window._saveSubAccount(obj);
+  closeSubModal();
+  showToast('✅',editingSubId?'Alt hesap güncellendi!':`"${name}" eklendi!`);
+}
+async function deleteSubAccount(id){
+  const s=getSub(id);if(!s)return;
+  const cnt=transactions().filter(t=>t.subAccountId===id||t.fromSubId===id||t.toSubId===id).length;
+  if(!confirm(`"${s.name}" alt hesabını ve ${cnt} işlemini silmek istiyor musunuz?`))return;
+  await window._deleteSubAccount(id);
+  if(currentView===id)currentView='all';
+  showToast('🗑️','Alt hesap silindi.');
+}
+
+// ── DELETE TX ─────────────────────────────────────────────────
+async function deleteTx(id){
+  const t=transactions().find(x=>x.id===id);if(!t)return;
+  const label=t.type==='transfer'?`Transfer (${fmt(t.amount)})`:`"${t.desc}"`;
+  if(confirm(`${label} silinsin mi?`)){await window._deleteTx(id);showToast('🗑️','İşlem silindi.');}
+}
+async function clearViewTx(){
+  if(currentView==='all'||currentView==='cashflow')return;
+  const isSub=subAccounts().some(s=>s.id===currentView);
+  const ids=transactions().filter(t=>{
+    if(isSub)return t.subAccountId===currentView||t.fromSubId===currentView||t.toSubId===currentView;
+    const sids=getSubsOfAcc(currentView).map(s=>s.id);
+    return t.accountId===currentView||sids.includes(t.subAccountId)||t.fromAccountId===currentView||t.toAccountId===currentView;
+  }).map(t=>t.id);
+  if(!ids.length)return;
+  if(!confirm(`${ids.length} işlem silinsin mi?`))return;
+  for(const id of ids) await window._deleteTx(id);
+  showToast('🗑️','İşlemler temizlendi.');
+}
+
+// ── MISC ─────────────────────────────────────────────────────
+function setTxFilter(f,el){txFilter=f;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));if(el)el.classList.add('active');renderTransactions();}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');}
+function toggleUserMenu(){document.getElementById('userMenu').classList.toggle('open');}
+document.addEventListener('click',e=>{if(!document.getElementById('userProfile').contains(e.target))document.getElementById('userMenu').classList.remove('open');});
+function showToast(icon,msg){const t=document.getElementById('toast');document.getElementById('toastIcon').textContent=icon;document.getElementById('toastMsg').textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2700);}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeTxModal();closeAccModal();closeSubModal();}
+  if(e.key==='Enter'){
+    if(document.getElementById('txModalOverlay').classList.contains('open'))saveTransaction();
+    else if(document.getElementById('accModalOverlay').classList.contains('open'))saveAccount();
+    else if(document.getElementById('subModalOverlay').classList.contains('open'))saveSubAccount();
+  }
+});
+</script>
+
+<!-- PWA: inline manifest via blob -->
+<script>
+const manifest = {
+  name: "Beyefendi Nakitakışı",
+  short_name: "Beyefendi",
+  description: "Kişisel Finans Kontrol Paneli",
+  start_url: "./",
+  display: "standalone",
+  background_color: "#0c0c12",
+  theme_color: "#0c0c12",
+  orientation: "any",
+  icons: [
+    { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23d4a843'/><text y='.9em' font-size='80' x='10'>👔</text></svg>", sizes: "192x192", type: "image/svg+xml" },
+    { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23d4a843'/><text y='.9em' font-size='80' x='10'>👔</text></svg>", sizes: "512x512", type: "image/svg+xml" }
+  ]
+};
+const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+const url  = URL.createObjectURL(blob);
+document.getElementById('manifestLink').href = url;
+</script>
+</body>
+</html>
