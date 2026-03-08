@@ -643,9 +643,20 @@ body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-he
           <option value="JPY">🇯🇵 JPY</option>
           <option value="SAR">🇸🇦 SAR</option>
           <option value="AED">🇦🇪 AED</option>
+          <option value="XAU">🥇 ALTIN (gram)</option>
         </select>
       </div>
       <div id="txAmountHint" style="font-size:10px;color:var(--muted);margin-top:4px;font-family:'DM Mono',monospace"></div>
+    </div>
+    <!-- GOLD GRAM FIELDS -->
+    <div class="form-group" id="goldGramGroup" style="display:none">
+      <label class="form-label">🥇 Altın Miktarı (gram)</label>
+      <input class="form-input" id="txGoldGram" type="number" min="0" step="any" placeholder="Örn: 10.5 (gram)" oninput="calcGoldTotal()">
+    </div>
+    <div class="form-group" id="goldPriceGroup" style="display:none">
+      <label class="form-label">Gram Altın Fiyatı (₺/gram)</label>
+      <input class="form-input" id="txGoldPrice" type="number" min="0" step="any" placeholder="Örn: 3.200 ₺/gram" oninput="calcGoldTotal()">
+      <div id="goldTotalHint" style="margin-top:6px;padding:9px 12px;background:var(--gold-bg);border:1px solid rgba(212,168,67,.2);border-radius:var(--radius-sm);font-size:11px;color:var(--gold);font-family:'DM Mono',monospace;display:none"></div>
     </div>
     <div class="form-group" id="txCatGroup">
       <label class="form-label">Kategori</label>
@@ -696,6 +707,7 @@ body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-he
         <option value="JPY">🇯🇵 JPY — Japon Yeni</option>
         <option value="SAR">🇸🇦 SAR — Suudi Riyali</option>
         <option value="AED">🇦🇪 AED — Dirhem</option>
+        <option value="XAU">🥇 XAU — Altın (gram)</option>
       </select>
     </div>
     <div class="form-group"><label class="form-label">İkon</label><div class="emoji-grid" id="emojiGrid"></div></div>
@@ -737,6 +749,7 @@ body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-he
         <option value="JPY">🇯🇵 JPY — Japon Yeni</option>
         <option value="SAR">🇸🇦 SAR — Suudi Riyali</option>
         <option value="AED">🇦🇪 AED — Dirhem</option>
+        <option value="XAU">🥇 XAU — Altın (gram)</option>
       </select>
     </div>
     <div class="form-group"><label class="form-label" id="subBalanceLbl">Başlangıç Bakiyesi</label><input class="form-input" id="subBalance" type="number" step="0.01" placeholder="0,00"></div>
@@ -1048,6 +1061,7 @@ function fmtCur(n, cur) {
   const c = CURRENCIES[cur] || CURRENCIES.TRY;
   const abs = Math.abs(n);
   if(cur === 'TRY') return '₺' + abs.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if(cur === 'XAU') return abs.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:4}) + 'g';
   if(cur === 'JPY') return c.sym + Math.round(abs).toLocaleString('tr-TR');
   return c.sym + abs.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
@@ -1118,6 +1132,18 @@ function subBalance(sid){
 function subCurrency(sid){ const s=getSub(sid); if(!s)return'TRY'; return s.currency||accCurrency(s.parentId)||'TRY'; }
 function totalNet(){ return accounts().reduce((s,a)=>s+accBalanceTRY(a.id),0); }
 
+// Gold gram total for a sub-account (sum goldGram of transactions)
+function subGoldGrams(sid){
+  return transactions().filter(t=>t.subAccountId===sid&&t.goldGram).reduce((s,t)=>{
+    return s+(t.type==='income'?t.goldGram:t.type==='expense'?-t.goldGram:0);
+  },0);
+}
+function accGoldGrams(accId){
+  return transactions().filter(t=>t.accountId===accId&&t.goldGram).reduce((s,t)=>{
+    return s+(t.type==='income'?t.goldGram:t.type==='expense'?-t.goldGram:0);
+  },0);
+}
+
 function getFilteredTx(){
   const month=document.getElementById('monthFilter').value;
   const search=(document.getElementById('searchInput').value||'').toLowerCase();
@@ -1151,7 +1177,8 @@ function renderSidebar(){
     const bal=accBalance(a.id);
     const cur=accCurrency(a.id);
     const active=currentView===a.id?'active':'';
-    const balDisplay=cur==='TRY'?fmt(bal):fmtCur(bal,cur);
+    const goldGrams=cur==='XAU'?accGoldGrams(a.id):null;
+    const balDisplay=cur==='XAU'?(goldGrams.toLocaleString('tr-TR',{maximumFractionDigits:2})+'g'):cur==='TRY'?fmt(bal):fmtCur(bal,cur);
     html+=`<div class="nav-account ${active}" id="nav-${a.id}" onclick="switchView('${a.id}')">
       <div class="acc-dot" style="background:${a.color}"></div>
       <span style="font-size:15px">${a.emoji}</span>
@@ -1248,9 +1275,18 @@ function renderSubAccountsSection(accId){
   const subs=getSubsOfAcc(accId);
   if(!subs.length)return`<div style="background:var(--surface);border:1px dashed var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;color:var(--muted)">Henüz alt hesap yok</span><button class="btn btn-blue btn-sm" onclick="openSubModal('${accId}')">＋ Alt Hesap Ekle</button></div>`;
   return`<div class="sub-accounts-section"><div class="sub-accounts-header"><div class="sub-accounts-title">Alt Hesaplar</div><button class="btn btn-blue btn-sm" onclick="openSubModal('${accId}')">＋ Yeni Alt Hesap</button></div><div class="sub-acc-grid">${subs.map(s=>{const ci=CAT_MAP[s.catalog]||CAT_MAP['Diğer'],bal=subBalance(s.id);return`<div class="sub-acc-card${currentView===s.id?' active-sub':''}" onclick="switchView('${s.id}')"><div class="sac-acts"><button onclick="event.stopPropagation();openSubModal('${accId}','${s.id}')">✏️</button><button onclick="event.stopPropagation();deleteSubAccount('${s.id}')">🗑</button></div><div class="sac-top"><span class="sac-catalog ${ci.cls}">${ci.label}</span></div><div class="sac-name">${s.name}</div>${s.note?`<div style="font-size:10px;color:var(--muted);margin-bottom:4px;font-family:'DM Mono',monospace">${s.note}</div>`:''}<div class="sac-balance" style="color:${bal>=0?'var(--g)':'var(--r)'}">
-  ${(()=>{const sc=subCurrency(s.id);return sc!=='TRY'?fmtCur(bal,sc):fmt(bal);})()}
+  ${(()=>{
+  const sc=subCurrency(s.id);
+  if(sc==='XAU'){const g=subGoldGrams(s.id);return g.toLocaleString('tr-TR',{maximumFractionDigits:4})+'g';}
+  return sc!=='TRY'?fmtCur(bal,sc):fmt(bal);
+})()}
 </div>
-${(()=>{const sc=subCurrency(s.id);if(sc==='TRY')return'';const tv=toTRY(bal,sc);return tv!==null?`<div style="font-size:9.5px;color:var(--muted);font-family:'DM Mono',monospace">≈${fmt(tv)}</div>`:curBadge(sc);})()}<div style="font-size:9.5px;color:var(--muted);margin-top:3px;font-family:'DM Mono',monospace">${transactions().filter(t=>t.subAccountId===s.id||t.fromSubId===s.id||t.toSubId===s.id).length} işlem</div></div>`;}).join('')}</div></div>`;
+${(()=>{
+  const sc=subCurrency(s.id);
+  if(sc==='XAU'){const g=subGoldGrams(s.id);const tryBal=bal;return tryBal!==0?`<div style="font-size:9.5px;color:var(--muted);font-family:'DM Mono',monospace">≈${fmt(tryBal)} TL</div>`:'';};
+  if(sc==='TRY')return'';
+  const tv=toTRY(bal,sc);return tv!==null?`<div style="font-size:9.5px;color:var(--muted);font-family:'DM Mono',monospace">≈${fmt(tv)}</div>`:curBadge(sc);
+})()}<div style="font-size:9.5px;color:var(--muted);margin-top:3px;font-family:'DM Mono',monospace">${transactions().filter(t=>t.subAccountId===s.id||t.fromSubId===s.id||t.toSubId===s.id).length} işlem</div></div>`;}).join('')}</div></div>`;
 }
 
 function renderOverview(){
@@ -1258,9 +1294,9 @@ function renderOverview(){
   const tI=transactions().filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
   const tE=transactions().filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
   return`<div class="acc-overview-grid">${accounts().map(a=>{const bal=accBalance(a.id),cur=accCurrency(a.id),subs=getSubsOfAcc(a.id);return`<div class="account-card" onclick="switchView('${a.id}')"><div class="ac-bar" style="background:${a.color}"></div><div class="ac-top"><span class="ac-emoji">${a.emoji}</span><div class="ac-actions"><button onclick="event.stopPropagation();openAccountModal('${a.id}')">✏️</button><button onclick="event.stopPropagation();deleteAccount('${a.id}')">🗑</button></div></div><div class="ac-name">${a.name}</div><div class="ac-type" style="color:${a.color}">${a.type}</div><div class="ac-balance" style="color:${bal>=0?'var(--g)':'var(--r)'}">
-  ${cur!=='TRY'?fmtCur(bal,cur):fmt(bal)}
+  ${cur==='XAU'?(accGoldGrams(a.id).toLocaleString('tr-TR',{maximumFractionDigits:4})+'g'):cur!=='TRY'?fmtCur(bal,cur):fmt(bal)}
 </div>
-${cur!=='TRY'?`<div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">≈${fmt(accBalanceTRY(a.id))}</div>`:''}
+${cur==='XAU'?`<div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">≈${fmt(bal)} TL</div>`:cur!=='TRY'?`<div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">≈${fmt(accBalanceTRY(a.id))}</div>`:''}
 ${curBadge(cur)}<div class="ac-sub">${transactions().filter(t=>t.accountId===a.id||t.fromAccountId===a.id||t.toAccountId===a.id).length} işlem</div>${subs.length?`<div class="sub-chips">${subs.map(s=>{const ci=CAT_MAP[s.catalog]||CAT_MAP['Diğer'];return`<span class="sub-chip ${ci.cls}" onclick="event.stopPropagation();switchView('${s.id}')">${ci.label} ${s.name}</span>`;}).join('')}</div>`:''}</div>`;}).join('')}<div class="add-account-card" onclick="openAccountModal()"><div style="font-size:24px">＋</div><div style="font-size:12px;font-weight:700">Hesap Ekle</div></div></div><div class="total-summary"><div><div class="ts-label">Toplam Varlık</div><div class="ts-val" style="color:var(--gold)">${fmt(totalNet())}</div></div><div><div class="ts-label">Toplam Gelir</div><div class="ts-val" style="color:var(--g)">${fmt(tI)}</div></div><div><div class="ts-label">Toplam Gider</div><div class="ts-val" style="color:var(--r)">${fmt(tE)}</div></div><div><div class="ts-label">Net</div><div class="ts-val" style="color:${tI-tE>=0?'var(--g)':'var(--r)'}">${tI-tE>=0?'▲ Kârlı':'▼ Zararda'}</div></div><div><div class="ts-label">Hesap</div><div class="ts-val" style="color:var(--text)">${accounts().length}</div></div><div><div class="ts-label">Alt Hesap</div><div class="ts-val" style="color:var(--b)">${subAccounts().length}</div></div></div>`;
 }
 
@@ -1299,9 +1335,20 @@ function renderTransactions(){
     const em=(t.cat||'🎁').split(' ')[0];
     const showBadge=currentView==='all'||currentView==='cashflow';
     const txCur=t.currency||accCurrency(t.accountId)||'TRY';
-    const txNative=fmtCur(t.amount,txCur);
-    const txTRY=txCur!=='TRY'&&toTRY(t.amount,txCur)!==null?` <span style="font-size:9.5px;opacity:.6">≈${fmt(toTRY(t.amount,txCur))}</span>`:'';
-    return`<div class="tx-item" onclick="deleteTx('${t.id}')"><div class="tx-icon" style="background:${bg}">${em}</div><div class="tx-info"><div class="tx-name">${t.desc}</div><div class="tx-meta"><span class="tx-cat-chip">${t.cat}</span>${txCur!=='TRY'?curBadge(txCur):''}${showBadge&&acc?`<span class="tx-acc-chip" style="border-color:${acc.color}40;color:${acc.color}">${acc.emoji} ${acc.name}${sub?' › '+sub.name:''}</span>`:''}${!showBadge&&sub?`<span style="color:var(--b);font-size:9.5px">└ ${sub.name}</span>`:''}</div></div><div class="tx-date">${fmtDate(t.date)}</div><div class="tx-amount ${t.type}">${t.type==='income'?'+':'-'}${txNative}${txTRY}</div></div>`;
+    const isGoldTx=txCur==='XAU'&&t.goldGram;
+    // Amount display: gold shows gram + TL, others show native + TL equiv
+    let amountDisplay='';
+    if(isGoldTx){
+      const gramStr=t.goldGram.toLocaleString('tr-TR',{maximumFractionDigits:4})+'g';
+      const tryStr=fmt(t.amount);
+      amountDisplay=`${t.type==='income'?'+':'-'}${gramStr} <span style="font-size:10px;opacity:.7">= ${tryStr}</span>`;
+    } else {
+      const txNative=fmtCur(t.amount,txCur);
+      const txTRY=txCur!=='TRY'&&toTRY(t.amount,txCur)!==null?` <span style="font-size:9.5px;opacity:.6">≈${fmt(toTRY(t.amount,txCur))}</span>`:'';
+      amountDisplay=`${t.type==='income'?'+':'-'}${txNative}${txTRY}`;
+    }
+    const goldMeta=isGoldTx?`<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(212,168,67,.12);color:var(--gold);font-family:'DM Mono',monospace;font-weight:700">🥇 ${t.goldGram}g × ₺${(t.goldPrice||0).toLocaleString('tr-TR',{maximumFractionDigits:0})}/g</span>`:'';
+    return`<div class="tx-item" onclick="deleteTx('${t.id}')"><div class="tx-icon" style="background:${bg}">${em}</div><div class="tx-info"><div class="tx-name">${t.desc}</div><div class="tx-meta"><span class="tx-cat-chip">${t.cat}</span>${goldMeta}${!isGoldTx&&txCur!=='TRY'?curBadge(txCur):''}${showBadge&&acc?`<span class="tx-acc-chip" style="border-color:${acc.color}40;color:${acc.color}">${acc.emoji} ${acc.name}${sub?' › '+sub.name:''}</span>`:''}${!showBadge&&sub?`<span style="color:var(--b);font-size:9.5px">└ ${sub.name}</span>`:''}</div></div><div class="tx-date">${fmtDate(t.date)}</div><div class="tx-amount ${t.type}">${amountDisplay}</div></div>`;
   }).join('');
 }
 
@@ -1731,13 +1778,44 @@ function syncTxCurrencyFromAccount(){
 function updateTxAmountLabel(){
   const cur=document.getElementById('txCurrency')?.value||'TRY';
   const hint=document.getElementById('txAmountHint');
-  if(!hint)return;
-  const amount=parseFloat(document.getElementById('txAmount')?.value)||0;
-  if(cur!=='TRY'&&amount>0){
-    const rate=getRateTRY(cur);
-    if(rate)hint.textContent=`≈ ₺${(amount*rate).toLocaleString('tr-TR',{maximumFractionDigits:2})} TRY karşılığı`;
-    else hint.textContent=`Kur bilgisi yükleniyor…`;
-  } else hint.textContent='';
+  const goldGramGroup=document.getElementById('goldGramGroup');
+  const goldPriceGroup=document.getElementById('goldPriceGroup');
+  const txAmountGroup=document.getElementById('txAmount')?.closest('.form-group');
+
+  // Show/hide gold fields
+  const isGold = cur==='XAU';
+  if(goldGramGroup) goldGramGroup.style.display = isGold ? '' : 'none';
+  if(goldPriceGroup) goldPriceGroup.style.display = isGold ? '' : 'none';
+  // Hide regular amount field label hint when gold
+  if(hint){
+    if(isGold){ hint.textContent=''; }
+    else {
+      const amount=parseFloat(document.getElementById('txAmount')?.value)||0;
+      if(cur!=='TRY'&&amount>0){
+        const rate=getRateTRY(cur);
+        if(rate)hint.textContent=`≈ ₺${(amount*rate).toLocaleString('tr-TR',{maximumFractionDigits:2})} TRY karşılığı`;
+        else hint.textContent='Kur bilgisi yükleniyor…';
+      } else hint.textContent='';
+    }
+  }
+  if(isGold) calcGoldTotal();
+}
+
+function calcGoldTotal(){
+  const gram=parseFloat(document.getElementById('txGoldGram')?.value)||0;
+  const price=parseFloat(document.getElementById('txGoldPrice')?.value)||0;
+  const hint=document.getElementById('goldTotalHint');
+  const amountEl=document.getElementById('txAmount');
+  if(!hint||!amountEl)return;
+  if(gram>0&&price>0){
+    const total=gram*price;
+    amountEl.value=total.toFixed(2); // store TRY equivalent in amount
+    hint.style.display='block';
+    hint.innerHTML=`🥇 ${gram.toLocaleString('tr-TR',{maximumFractionDigits:4})} gram × ₺${price.toLocaleString('tr-TR',{maximumFractionDigits:2})}/g = <strong>₺${total.toLocaleString('tr-TR',{maximumFractionDigits:2})}</strong>`;
+  } else {
+    hint.style.display='none';
+    if(gram>0&&!price)hint.textContent='';
+  }
 }
 function updateAccBalanceLabel(){
   const cur=document.getElementById('accCurrency')?.value||'TRY';
@@ -1770,6 +1848,12 @@ function openTxModal(type){
   document.getElementById('txModalOverlay').classList.add('open');
   document.getElementById('txDate').value=new Date().toISOString().split('T')[0];
   document.getElementById('txDesc').value='';document.getElementById('txAmount').value='';
+  // Reset gold fields
+  const ggEl=document.getElementById('txGoldGram');if(ggEl)ggEl.value='';
+  const gpEl=document.getElementById('txGoldPrice');if(gpEl)gpEl.value='';
+  const ghEl=document.getElementById('goldTotalHint');if(ghEl){ghEl.style.display='none';ghEl.textContent='';}
+  const ggGr=document.getElementById('goldGramGroup');if(ggGr)ggGr.style.display='none';
+  const gpGr=document.getElementById('goldPriceGroup');if(gpGr)gpGr.style.display='none';
   populateAccSelects();setTxType(type);
   setTimeout(()=>document.getElementById('txDesc').focus(),100);
 }
@@ -1807,7 +1891,13 @@ async function saveTransaction(){
     if(!desc){showToast('⚠️','Açıklama giriniz!');return;}
     const cat=document.getElementById('txCat').value;
     const currency=document.getElementById('txCurrency')?.value||accCurrency(fromId)||'TRY';
-    obj={id:uid(),type:currentTxType,accountId:fromId,subAccountId:fromSubId,desc,amount,cat,date,currency};
+    const isGold=currency==='XAU';
+    const goldGram=isGold?(parseFloat(document.getElementById('txGoldGram')?.value)||null):null;
+    const goldPrice=isGold?(parseFloat(document.getElementById('txGoldPrice')?.value)||null):null;
+    if(isGold&&(!goldGram||goldGram<=0)){showToast('⚠️','Gram miktarı giriniz!');return;}
+    if(isGold&&(!goldPrice||goldPrice<=0)){showToast('⚠️','Gram fiyatı giriniz!');return;}
+    const finalAmount=isGold&&goldGram&&goldPrice?goldGram*goldPrice:amount;
+    obj={id:uid(),type:currentTxType,accountId:fromId,subAccountId:fromSubId,desc,amount:finalAmount,cat,date,currency,goldGram,goldPrice};
   }
   await window._saveTx(obj);
   closeTxModal();
