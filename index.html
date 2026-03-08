@@ -1344,24 +1344,7 @@ document.addEventListener('keydown',e=>{
 });
 </script>
 
-<!-- PWA: inline manifest via blob -->
 <script>
-const manifest = {
-  name: "Beyefendi Nakitakışı",
-  short_name: "Beyefendi",
-  description: "Kişisel Finans Kontrol Paneli",
-  start_url: "./",
-  display: "standalone",
-  background_color: "#0c0c12",
-  theme_color: "#0c0c12",
-  orientation: "any",
- icons: [
-    { src: "fedora-logo-quote.png", sizes: "512x512", type: "image/png" }
-]
-};
-const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
-const url  = URL.createObjectURL(blob);
-document.getElementById('manifestLink').href = url;
+// PWA manifest
+document.getElementById('manifestLink').href = './manifest.json';
 </script>
-</body>
-</html>
